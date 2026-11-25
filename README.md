@@ -33,7 +33,7 @@ flutter pub get
 flutter run --dart-define=API_BASE_URL=https://alamat-hris-anda
 flutter build apk --release --dart-define=API_BASE_URL=https://alamat-hris-anda
 ```
-Tanpa `API_BASE_URL`, aplikasi memakai `http://10.0.2.2:8000` (Laravel lokal dari emulator Android).
+Tanpa `API_BASE_URL`, aplikasi memakai `https://cok-hris.com`. Untuk Laravel lokal dari emulator Android pakai `--dart-define=API_BASE_URL=http://10.0.2.2:8000`.
 
 Catatan iOS: membaca nama/BSSID Wi-Fi butuh capability *Access WiFi Information*
 di Xcode; tanpa itu absen tetap jalan, hanya bukti Wi-Fi yang kosong.
