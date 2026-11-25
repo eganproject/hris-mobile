@@ -55,14 +55,18 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
+    // Material sendiri (bukan sekadar Container putih) supaya Ink/InkWell di dalam
+    // kartu dilukis DI ATAS kartu. Tanpa ini tombol berlatar Ink (mis. "Absen
+    // Pulang" di Beranda) terlukis di Material Scaffold, tertutup kartu, dan
+    // tidak terlihat.
+    final shape = BorderRadius.circular(radius);
+    return DecoratedBox(
+      decoration: BoxDecoration(borderRadius: shape, boxShadow: AppColors.cardShadow),
+      child: Material(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: AppColors.cardShadow,
+        borderRadius: shape,
+        child: Padding(padding: padding, child: child),
       ),
-      child: child,
     );
   }
 }
