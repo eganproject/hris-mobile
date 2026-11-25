@@ -134,6 +134,9 @@ class _MemberRow extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(emp['name'] as String? ?? '-', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
             Text(sub, style: const TextStyle(fontSize: 12.5, color: T2Colors.muted)),
+            if (row['manager_name'] is String)
+              Text('Tim ${row['manager_name']}',
+                  style: const TextStyle(fontSize: 12, color: T2Colors.muted, fontWeight: FontWeight.w600)),
           ]),
         ),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [

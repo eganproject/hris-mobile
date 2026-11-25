@@ -8,8 +8,8 @@ import '../../core/widgets/ui.dart';
 import '../t2_common/t2_ui.dart';
 import 'profil_providers.dart';
 
-/// Tab Profil: identitas, menu atasan (hanya bila punya bawahan), menu akun,
-/// HP absen terdaftar, dan keluar.
+/// Tab Profil: identitas, menu akun,
+/// HP absen terdaftar, dan keluar. Menu atasan ada di Beranda (LeaderPanel).
 class ProfilPage extends ConsumerWidget {
   const ProfilPage({super.key});
 
@@ -18,12 +18,6 @@ class ProfilPage extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     if (user == null) return const SizedBox.shrink();
     final e = user.employee;
-    final profile = ref.watch(profileProvider);
-    final p = profile.asData?.value;
-    final isLeader = (p?['is_leader'] as bool?) ?? user.isLeader;
-    final leader = p?['leader'] is Map ? Map<String, dynamic>.from(p!['leader'] as Map) : null;
-    final pending = (leader?['pending_approvals'] as num?)?.toInt() ?? 0;
-    final teamSize = (leader?['team_size'] as num?)?.toInt();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -64,35 +58,6 @@ class ProfilPage extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                if (isLeader) ...[
-                  const _GroupLabel('MENU ATASAN'),
-                  AppCard(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(children: [
-                      _MenuRow(
-                        icon: Icons.fact_check_outlined,
-                        title: 'Persetujuan',
-                        subtitle: 'Cuti, izin, sakit, dan lembur tim',
-                        badge: pending > 0 ? '$pending' : null,
-                        onTap: () => context.push('/tim/persetujuan'),
-                      ),
-                      _MenuRow(
-                        icon: Icons.groups_2_outlined,
-                        title: 'Tim hari ini',
-                        subtitle: teamSize == null ? 'Siapa yang sudah masuk' : '$teamSize anggota tim',
-                        onTap: () => context.push('/tim/hari-ini'),
-                      ),
-                      _MenuRow(
-                        icon: Icons.calendar_view_week_outlined,
-                        title: 'Atur jadwal tim',
-                        subtitle: 'Susun dan terbitkan jadwal mingguan',
-                        onTap: () => context.push('/tim/jadwal'),
-                        last: true,
-                      ),
-                    ]),
-                  ),
-                  const SizedBox(height: 18),
-                ],
                 const _GroupLabel('AKUN'),
                 AppCard(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -191,11 +156,10 @@ class _GroupLabel extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.icon, required this.title, this.subtitle, this.badge, required this.onTap, this.last = false});
+  const _MenuRow({required this.icon, required this.title, this.subtitle, required this.onTap, this.last = false});
   final IconData icon;
   final String title;
   final String? subtitle;
-  final String? badge;
   final VoidCallback onTap;
   final bool last;
 
@@ -223,13 +187,6 @@ class _MenuRow extends StatelessWidget {
               if (subtitle != null) Text(subtitle!, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
             ]),
           ),
-          if (badge != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              margin: const EdgeInsets.only(right: 6),
-              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(99)),
-              child: Text(badge!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
-            ),
           const Icon(Icons.chevron_right, color: T2Colors.faint),
         ]),
       ),

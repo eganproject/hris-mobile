@@ -12,9 +12,12 @@ import '../../core/widgets/ui.dart';
 import '../absen/attendance_models.dart';
 import '../absen/attendance_repository.dart';
 import '../absen/offline_queue.dart';
+import '../profil/profil_providers.dart';
+import '../tim/leader_panel.dart';
 
 /// Beranda: jam, jadwal hari ini, lokasi kantor, tombol bulat Masuk/Pulang,
-/// ringkasan jam masuk & pulang. Saat sesi terbuka tampil "Sedang bekerja".
+/// ringkasan jam masuk & pulang, dan panel Tim saya untuk atasan. Saat sesi
+/// terbuka tampil "Sedang bekerja".
 class BerandaPage extends ConsumerStatefulWidget {
   const BerandaPage({super.key});
 
@@ -65,6 +68,7 @@ class _BerandaPageState extends ConsumerState<BerandaPage> with WidgetsBindingOb
         color: AppColors.primary,
         onRefresh: () async {
           ref.invalidate(attendanceStatusProvider);
+          ref.invalidate(profileProvider);
           await ref.read(offlineQueueProvider.notifier).flush();
           await ref.read(attendanceStatusProvider.future).catchError((_) => data!);
         },
@@ -85,6 +89,7 @@ class _BerandaPageState extends ConsumerState<BerandaPage> with WidgetsBindingOb
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                   child: working ? _workingBody(data, clockInAt) : _idleBody(data),
                 ),
+                const LeaderPanel(),
               ],
             ),
           ),
