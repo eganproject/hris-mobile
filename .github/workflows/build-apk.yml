@@ -27,6 +27,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          # Simpan unduhan Gradle/Maven antar-build: lebih cepat dan tidak
+          # terkena batas unduhan (HTTP 429) dari Maven Central.
+          cache: gradle
 
       - uses: subosito/flutter-action@v2
         with:
@@ -39,7 +42,16 @@ jobs:
       - run: flutter test
 
       - name: Build APK
-        run: flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"
+        # Maven Central kadang menolak sementara (HTTP 429): coba sampai 3x dengan jeda.
+        run: |
+          for attempt in 1 2 3; do
+            if flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"; then
+              exit 0
+            fi
+            echo "Build gagal (percobaan $attempt), coba lagi dalam $((attempt * 60)) detik..."
+            sleep $((attempt * 60))
+          done
+          exit 1
 
       - uses: actions/upload-artifact@v4
         with:
