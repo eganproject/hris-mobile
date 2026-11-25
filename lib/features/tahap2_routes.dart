@@ -11,6 +11,9 @@ import 'pengajuan/overtime_form_page.dart';
 import 'pengajuan/pengajuan_list_page.dart';
 import 'pengajuan/swap_form_page.dart';
 import 'profil/data_diri_page.dart';
+import 'rekan/kabar_rekan_page.dart';
+import 'rekan/profil_rekan_page.dart';
+import 'rekan/rekan_page.dart';
 import 'tim/jadwal_tim_page.dart';
 import 'tim/persetujuan_page.dart';
 import 'tim/tim_hari_ini_page.dart';
@@ -22,6 +25,7 @@ import 'tim/tim_hari_ini_page.dart';
 /// Lainnya: /jadwal, /notifikasi, /profil/data-diri, /struktur.
 /// Atasan: /tim/persetujuan, /tim/hari-ini, /tim/jadwal.
 /// Kabar: /kabar/tulis, /kabar/pengumuman, /kabar/pengumuman/:id, /kabar/post/:id.
+/// Rekan: /rekan, /rekan/:id, /rekan/:id/kabar.
 final List<RouteBase> tahap2Routes = [
   GoRoute(
     path: '/pengajuan/cuti',
@@ -49,5 +53,15 @@ final List<RouteBase> tahap2Routes = [
   GoRoute(
     path: '/kabar/post/:id',
     builder: (_, state) => PostDetailPage(id: int.parse(state.pathParameters['id']!)),
+  ),
+  // Rekan kerja: daftar online/offline, profil publik, kabar seseorang.
+  GoRoute(path: '/rekan', builder: (_, _) => const RekanPage()),
+  GoRoute(
+    path: '/rekan/:id',
+    builder: (_, state) => ProfilRekanPage(id: int.parse(state.pathParameters['id']!)),
+  ),
+  GoRoute(
+    path: '/rekan/:id/kabar',
+    builder: (_, state) => KabarRekanPage(id: int.parse(state.pathParameters['id']!), name: state.uri.queryParameters['name']),
   ),
 ];

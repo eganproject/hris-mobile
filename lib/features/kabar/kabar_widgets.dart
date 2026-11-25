@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../rekan/rekan_providers.dart';
 import '../t2_common/auth_image.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
@@ -110,6 +111,7 @@ class _PostCardState extends ConsumerState<PostCard> {
     final p = widget.post;
     final author = asMap(p['author']);
     final hidden = p['is_hidden'] == true;
+    final online = ref.watch(onlineIdsProvider).contains((author['id'] as num?)?.toInt());
 
     void open() async {
       if (widget.inDetail) return;
@@ -122,19 +124,27 @@ class _PostCardState extends ConsumerState<PostCard> {
       padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          PersonAvatar(person: author, size: 40),
-          const SizedBox(width: 10),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(author['name'] as String? ?? '-', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
-              Text(
-                [author['job_title'], relativeTime(p['created_at']), if (p['audience'] == 'division') p['audience_label']]
-                    .whereType<String>()
-                    .where((s) => s.isNotEmpty)
-                    .join(' · '),
-                style: const TextStyle(fontSize: 12, color: T2Colors.muted),
-              ),
-            ]),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: author['id'] == null ? null : () => context.push('/rekan/${author['id']}'),
+              child: Row(children: [
+                PersonAvatar(person: author, size: 40, online: online ? true : null),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(author['name'] as String? ?? '-', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                    Text(
+                      [author['job_title'], relativeTime(p['created_at']), if (p['audience'] == 'division') p['audience_label']]
+                          .whereType<String>()
+                          .where((s) => s.isNotEmpty)
+                          .join(' · '),
+                      style: const TextStyle(fontSize: 12, color: T2Colors.muted),
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
           ),
           PostMenu(
             isMine: p['is_mine'] == true,

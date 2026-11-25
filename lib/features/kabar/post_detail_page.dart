@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../t2_common/async_body.dart';
@@ -179,7 +180,10 @@ class _CommentTileState extends ConsumerState<_CommentTile> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        PersonAvatar(person: author, size: widget.small ? 30 : 36),
+        GestureDetector(
+          onTap: author['id'] == null ? null : () => context.push('/rekan/${author['id']}'),
+          child: PersonAvatar(person: author, size: widget.small ? 30 : 36),
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

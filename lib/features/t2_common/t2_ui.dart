@@ -86,9 +86,13 @@ class T2Card extends StatelessWidget {
 
 /// Lingkaran inisial (atau foto bila ada).
 class PersonAvatar extends StatelessWidget {
-  const PersonAvatar({super.key, required this.person, this.size = 42});
+  const PersonAvatar({super.key, required this.person, this.size = 42, this.online, this.ringColor = Colors.white});
   final Map<String, dynamic>? person;
   final double size;
+
+  /// true = titik hijau, false = titik abu-abu, null = tanpa titik.
+  final bool? online;
+  final Color ringColor;
 
   static const _palette = [Color(0xFFF59E0B), Color(0xFF6366F1), Color(0xFF10B981), Color(0xFFEF4444), Color(0xFF0EA5E9), Color(0xFF8B5CF6)];
 
@@ -98,13 +102,49 @@ class PersonAvatar extends StatelessWidget {
     final initials = (person?['initials'] ?? '?') as String;
     final photo = person?['photo_url'] as String?;
     final color = _palette[name.hashCode.abs() % _palette.length];
-    return CircleAvatar(
+    final avatar = CircleAvatar(
       radius: size / 2,
       backgroundColor: color,
       foregroundImage: photo != null ? NetworkImage(photo) : null,
+      onForegroundImageError: photo != null ? (_, _) {} : null,
       child: Text(initials, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: size * .36)),
     );
+    if (online == null) return avatar;
+    final dot = (size * .3).clamp(10.0, 20.0);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(clipBehavior: Clip.none, children: [
+        avatar,
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: Container(
+            width: dot,
+            height: dot,
+            decoration: BoxDecoration(
+              color: online! ? const Color(0xFF16A34A) : const Color(0xFFB6BDC9),
+              shape: BoxShape.circle,
+              border: Border.all(color: ringColor, width: dot * .2),
+            ),
+          ),
+        ),
+      ]),
+    );
   }
+}
+
+/// Konten dibatasi lebarnya di tablet/layar lebar supaya tetap enak dibaca.
+class MaxWidth extends StatelessWidget {
+  const MaxWidth({super.key, required this.child, this.width = 640});
+  final Widget child;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) => Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: width), child: child),
+      );
 }
 
 class PageTitle extends StatelessWidget {
@@ -208,6 +248,7 @@ class PrimaryButton extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: T2Colors.orange,
           shape: const StadiumBorder(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         onPressed: busy ? null : onPressed,
@@ -215,7 +256,8 @@ class PrimaryButton extends StatelessWidget {
             ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
             : Row(mainAxisSize: MainAxisSize.min, children: [
                 if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)],
-                Text(label),
+                // Mengecil di HP sempit alih-alih terpotong/overflow.
+                Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1))),
               ]),
       ),
     );

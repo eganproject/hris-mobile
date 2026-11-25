@@ -4,7 +4,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_ui.dart';
+import '../rekan/rekan_providers.dart';
 import 'kabar_widgets.dart';
+import 'online_strip.dart';
 
 /// Tab Kabar: pengumuman HR di atas, lalu postingan rekan (semua / divisi saya).
 class KabarPage extends ConsumerStatefulWidget {
@@ -111,13 +113,18 @@ class _KabarPageState extends ConsumerState<KabarPage> {
         bottom: false,
         child: RefreshIndicator(
           color: T2Colors.orange,
-          onRefresh: _load,
+          onRefresh: () async {
+            ref.invalidate(onlinePeopleProvider);
+            await _load();
+          },
           child: ListView(
             controller: _scroll,
             padding: const EdgeInsets.only(bottom: 140),
             children: [
               const PageTitle('Kabar'),
               const SizedBox(height: 12),
+              const OnlineStrip(),
+              const SizedBox(height: 14),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(children: [
