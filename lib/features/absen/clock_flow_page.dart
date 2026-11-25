@@ -13,15 +13,15 @@ import '../../core/util/format.dart';
 import '../../core/widgets/ui.dart';
 import 'attendance_models.dart';
 import 'attendance_repository.dart';
-import 'blink_camera.dart';
 import 'clock_request.dart';
 import 'device_checks.dart';
 import 'offline_queue.dart';
+import 'selfie_camera.dart';
 
-enum _Step { checking, outsideRadius, camera, blinkFailed, sending, success, rejected, queued, error }
+enum _Step { checking, outsideRadius, camera, sending, success, rejected, queued, error }
 
 /// Alur absen masuk/pulang: cek lokasi & HP → (di luar area: alasan) →
-/// selfie + kedip → kirim (atau antre bila offline) → hasil.
+/// selfie → kirim (atau antre bila offline) → hasil.
 class ClockFlowPage extends ConsumerStatefulWidget {
   const ClockFlowPage({super.key, required this.type});
 
@@ -33,11 +33,11 @@ class ClockFlowPage extends ConsumerStatefulWidget {
 }
 
 class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
-  final _cameraKey = GlobalKey<BlinkCameraState>();
+  final _cameraKey = GlobalKey<SelfieCameraState>();
   final _noteController = TextEditingController();
 
   _Step _step = _Step.checking;
-  BlinkPhase _phase = BlinkPhase.starting;
+  SelfiePhase _phase = SelfiePhase.starting;
   AttendanceStatusDto? _status;
   LocationSnapshot? _location;
   double? _distance;
@@ -97,9 +97,7 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
     setState(() => _step = _Step.camera);
   }
 
-  void _onCaptured(XFile photo, bool blinkVerified) => _submit(photo, blinkVerified);
-
-  Future<void> _submit(XFile photo, bool blinkVerified) async {
+  Future<void> _submit(XFile photo) async {
     setState(() => _step = _Step.sending);
 
     final uuid = const Uuid().v4();
@@ -119,7 +117,6 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
       latitude: loc?.position?.latitude,
       longitude: loc?.position?.longitude,
       accuracy: loc?.position?.accuracy,
-      blinkVerified: blinkVerified,
       isMockLocation: loc?.isMocked ?? false,
       isRooted: loc?.isRooted ?? false,
       wifiSsid: loc?.wifiSsid,
@@ -155,7 +152,7 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
     return switch (_step) {
       _Step.checking || _Step.sending => _loading(_step == _Step.checking ? 'Memeriksa lokasi dan HP…' : 'Mengirim absen…'),
       _Step.outsideRadius => _outsideRadius(),
-      _Step.camera || _Step.blinkFailed => _camera(),
+      _Step.camera => _camera(),
       _Step.success => _success(),
       _Step.rejected => _rejected(),
       _Step.queued => _queued(),
@@ -226,13 +223,11 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
     final office = status?.location;
     final loc = _location;
     final hint = switch (_phase) {
-      BlinkPhase.starting => 'Menyiapkan kamera…',
-      BlinkPhase.noFace => 'Posisikan wajah di dalam bingkai',
-      BlinkPhase.multipleFaces => 'Pastikan hanya satu wajah',
-      BlinkPhase.waitingBlink => 'Kedipkan mata sekali',
-      BlinkPhase.captured => 'Foto diambil',
-      BlinkPhase.timeout => 'Kedipan belum terbaca',
-      BlinkPhase.error => _cameraKey.currentState?.errorMessage ?? 'Kamera bermasalah',
+      SelfiePhase.starting => 'Menyiapkan kamera…',
+      SelfiePhase.ready => 'Posisikan wajah di dalam bingkai',
+      SelfiePhase.capturing => 'Mengambil foto…',
+      SelfiePhase.captured => 'Foto diambil',
+      SelfiePhase.error => _cameraKey.currentState?.errorMessage ?? 'Kamera bermasalah',
     };
     final locationChip = status == null
         ? 'Offline · lokasi dicatat'
@@ -244,19 +239,13 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
       backgroundColor: const Color(0xFF0A0F20),
       body: Stack(children: [
         Positioned.fill(
-          child: BlinkCamera(
+          child: SelfieCamera(
             key: _cameraKey,
-            timeout: Duration(seconds: status?.blinkTimeoutSeconds ?? 10),
-            onCaptured: _onCaptured,
-            onPhase: (p) {
-              setState(() {
-                _phase = p;
-                if (p == BlinkPhase.timeout) _step = _Step.blinkFailed;
-              });
-            },
+            onCaptured: _submit,
+            onPhase: (p) => setState(() => _phase = p),
           ),
         ),
-        Positioned.fill(child: CustomPaint(painter: _FaceFramePainter(progress: _cameraKey.currentState?.progress))),
+        Positioned.fill(child: CustomPaint(painter: _FaceFramePainter())),
         SafeArea(
           child: Column(children: [
             Padding(
@@ -278,19 +267,17 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
                 boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 30, offset: Offset(0, 10))],
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.visibility_outlined, color: AppColors.primary, size: 22),
+                const Icon(Icons.face_outlined, color: AppColors.primary, size: 22),
                 const SizedBox(width: 10),
                 Text(hint, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink)),
               ]),
             ),
             const SizedBox(height: 14),
             Wrap(spacing: 8, alignment: WrapAlignment.center, children: [
-              if (_phase == BlinkPhase.waitingBlink)
-                const StatusPill(label: 'Wajah terlihat', tone: PillTone.onPrimary, icon: Icons.check),
               StatusPill(label: locationChip, tone: PillTone.onPrimary, icon: Icons.place_outlined),
             ]),
             const SizedBox(height: 28),
-            if (_step == _Step.blinkFailed) _blinkFailedPanel() else _captureHint(),
+            _shutter(),
             const SizedBox(height: 28),
           ]),
         ),
@@ -298,50 +285,39 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
     );
   }
 
-  Widget _captureHint() => Column(children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4)),
-          alignment: Alignment.center,
+  Widget _shutter() {
+    final ready = _phase == SelfiePhase.ready;
+    return Column(children: [
+      Semantics(
+        label: 'Ambil foto',
+        button: true,
+        child: InkResponse(
+          onTap: ready ? () => _cameraKey.currentState?.capture() : null,
+          radius: 44,
           child: Container(
-            width: 62,
-            height: 62,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.5)),
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4)),
+            alignment: Alignment.center,
+            child: Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: ready ? AppColors.primary : Colors.white.withValues(alpha: 0.4),
+              ),
+              child: _phase == SelfiePhase.capturing
+                  ? const Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                  : const Icon(Icons.camera_alt, color: Colors.white, size: 28),
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        Text('Foto diambil otomatis setelah kamu berkedip',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12.5)),
-      ]);
-
-  Widget _blinkFailedPanel() => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(26)),
-        child: Column(children: [
-          const Text('Kedipan belum terbaca', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          const Text(
-            'Coba cari tempat lebih terang dan lepas kacamata hitam. Atau ambil foto saja, nanti HR cek manual.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, height: 1.5),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () {
-              setState(() => _step = _Step.camera);
-              _cameraKey.currentState?.retry();
-            },
-            child: const Text('Coba kedip lagi'),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: () => _cameraKey.currentState?.captureWithoutBlink(),
-            child: const Text('Ambil foto tanpa kedip'),
-          ),
-        ]),
-      );
+      ),
+      const SizedBox(height: 12),
+      Text('Ketuk tombol untuk mengambil selfie',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12.5)),
+    ]);
+  }
 
   Widget _roundButton(IconData icon, String label, VoidCallback onTap) => Semantics(
         label: label,
@@ -395,8 +371,7 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
                 radius: 26,
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
                 child: Column(children: [
-                  _proofRow(Icons.face_retouching_natural, 'Selfie + kedip',
-                      r.blinkVerified ? 'Terverifikasi' : 'Kedip tidak terverifikasi, HR akan cek', r.blinkVerified),
+                  _proofRow(Icons.face_retouching_natural, 'Selfie', 'Foto tersimpan', true),
                   const Divider(height: 1, color: AppColors.line),
                   _proofRow(Icons.place_outlined, place, placeDetail, r.withinRadius != false),
                 ]),
@@ -561,12 +536,8 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
   }
 }
 
-/// Bingkai oval wajah + cincin progres batas waktu kedip.
+/// Bingkai oval wajah.
 class _FaceFramePainter extends CustomPainter {
-  _FaceFramePainter({this.progress}) : super(repaint: progress);
-
-  final ValueNotifier<double>? progress;
-
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromCenter(center: Offset(size.width / 2, size.height * 0.38), width: 248, height: 310);
@@ -577,23 +548,13 @@ class _FaceFramePainter extends CustomPainter {
       ..addOval(rect);
     canvas.drawPath(path, dim);
 
-    final base = Paint()
-      ..color = Colors.white.withValues(alpha: 0.18)
+    final border = Paint()
+      ..color = Colors.white.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6;
-    canvas.drawOval(rect, base);
-
-    final value = progress?.value ?? 0;
-    if (value > 0) {
-      final arc = Paint()
-        ..color = AppColors.gradientStart
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = 6;
-      canvas.drawArc(rect, -1.5708, 6.2832 * (1 - value), false, arc);
-    }
+      ..strokeWidth = 4;
+    canvas.drawOval(rect, border);
   }
 
   @override
-  bool shouldRepaint(covariant _FaceFramePainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _FaceFramePainter oldDelegate) => false;
 }

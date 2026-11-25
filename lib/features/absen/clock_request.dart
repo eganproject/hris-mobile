@@ -12,7 +12,6 @@ class ClockRequest {
     this.latitude,
     this.longitude,
     this.accuracy,
-    required this.blinkVerified,
     required this.isMockLocation,
     required this.isRooted,
     this.wifiSsid,
@@ -31,7 +30,6 @@ class ClockRequest {
   final double? latitude;
   final double? longitude;
   final double? accuracy;
-  final bool blinkVerified;
   final bool isMockLocation;
   final bool isRooted;
   final String? wifiSsid;
@@ -48,7 +46,6 @@ class ClockRequest {
         'latitude': latitude,
         'longitude': longitude,
         'accuracy': accuracy,
-        'blink_verified': blinkVerified,
         'is_mock_location': isMockLocation,
         'is_rooted': isRooted,
         'wifi_ssid': wifiSsid,
@@ -66,7 +63,6 @@ class ClockRequest {
         latitude: (j['latitude'] as num?)?.toDouble(),
         longitude: (j['longitude'] as num?)?.toDouble(),
         accuracy: (j['accuracy'] as num?)?.toDouble(),
-        blinkVerified: j['blink_verified'] as bool? ?? false,
         isMockLocation: j['is_mock_location'] as bool? ?? false,
         isRooted: j['is_rooted'] as bool? ?? false,
         wifiSsid: j['wifi_ssid'] as String?,

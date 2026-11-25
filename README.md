@@ -7,9 +7,8 @@ Backend: repo `eganproject/hris` (Laravel), API di `/api/mobile/v1`.
 - Login dengan akun HRIS web (email atau NIK). Satu akun = satu HP; HP
   pertama aktif otomatis, ganti HP disetujui HR (menu web *Absen Aplikasi HP*).
 - Persetujuan penyimpanan selfie & lokasi (UU PDP) sekali per HP.
-- Absen masuk/pulang: selfie kamera depan + cek kedip (ML Kit, di HP),
+- Absen masuk/pulang: selfie kamera depan (tekan tombol, tanpa cek kedip),
   lokasi GPS dibandingkan radius Lokasi Kerja; WFH/dinas luar tanpa radius.
-  Kedip gagal ±10 detik → boleh ambil foto tanpa kedip (ditandai untuk HR).
 - Lokasi palsu (fake GPS) dan HP root/jailbreak ditolak server; percobaannya tercatat.
 - Antrean offline: absen tanpa sinyal disimpan dengan ID unik dan jam saat
   tombol ditekan, dikirim ulang otomatis (tiap 30 detik / saat online) sampai

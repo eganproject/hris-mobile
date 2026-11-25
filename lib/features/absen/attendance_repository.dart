@@ -24,7 +24,6 @@ class AttendanceRepository {
       if (r.latitude != null) 'latitude': r.latitude.toString(),
       if (r.longitude != null) 'longitude': r.longitude.toString(),
       if (r.accuracy != null) 'accuracy': r.accuracy!.toStringAsFixed(1),
-      'blink_verified': r.blinkVerified ? '1' : '0',
       'is_mock_location': r.isMockLocation ? '1' : '0',
       'is_rooted': r.isRooted ? '1' : '0',
       if (r.wifiSsid != null) 'wifi_ssid': r.wifiSsid,

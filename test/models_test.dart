@@ -12,7 +12,6 @@ void main() {
       latitude: -6.2,
       longitude: 106.8,
       accuracy: 12,
-      blinkVerified: false,
       isMockLocation: false,
       isRooted: false,
       note: 'Rapat klien',
@@ -20,7 +19,7 @@ void main() {
     final back = ClockRequest.decodeList(ClockRequest.encodeList([r])).single;
     expect(back.clientUuid, r.clientUuid);
     expect(back.capturedAt.toUtc(), r.capturedAt);
-    expect(back.blinkVerified, isFalse);
+    expect(back.isMockLocation, isFalse);
     expect(back.note, 'Rapat klien');
   });
 
