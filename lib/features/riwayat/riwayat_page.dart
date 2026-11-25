@@ -76,7 +76,7 @@ class RiwayatPage extends ConsumerWidget {
                   const SizedBox(width: 10),
                   _stat('${h.late}', 'Telat', AppColors.warning),
                   const SizedBox(width: 10),
-                  _stat('${h.reviewed}', 'Ditinjau', AppColors.navy),
+                  _stat('${h.flagged}', 'Bertanda', AppColors.navy),
                 ]),
                 const SizedBox(height: 16),
                 if (h.items.isEmpty)
@@ -126,7 +126,7 @@ class RiwayatPage extends ConsumerWidget {
     final label = working
         ? 'Bekerja'
         : d.flags.isNotEmpty
-            ? 'Ditinjau'
+            ? 'Bertanda'
             : (d.status == 'late' && d.lateMinutes > 0 ? 'Telat ${d.lateMinutes}m' : d.statusLabel);
 
     return AppCard(

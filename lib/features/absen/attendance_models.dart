@@ -163,7 +163,7 @@ class ClockResult {
     this.withinRadius,
     required this.blinkVerified,
     required this.flagLabels,
-    required this.needsReview,
+    required this.flagged,
     required this.modeLabel,
   });
 
@@ -178,7 +178,8 @@ class ClockResult {
   final bool? withinRadius;
   final bool blinkVerified;
   final List<String> flagLabels;
-  final bool needsReview;
+  /// Absen diberi tanda (mis. di luar radius). Hanya penanda, tanpa persetujuan HR.
+  final bool flagged;
   final String modeLabel;
 
   factory ClockResult.fromJson(Map<String, dynamic> j) => ClockResult(
@@ -193,7 +194,7 @@ class ClockResult {
         withinRadius: j['within_radius'] as bool?,
         blinkVerified: j['blink_verified'] as bool? ?? false,
         flagLabels: ((j['flag_labels'] as List?) ?? const []).map((e) => e.toString()).toList(),
-        needsReview: j['needs_review'] as bool? ?? false,
+        flagged: j['flagged'] as bool? ?? ((j['flags'] as List?)?.isNotEmpty ?? false),
         modeLabel: j['mode_label'] as String? ?? '',
       );
 }

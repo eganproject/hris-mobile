@@ -50,7 +50,7 @@ class HistoryMonth {
   final int absent;
   final List<AttendanceDay> items;
 
-  int get reviewed => items.where((d) => d.flags.isNotEmpty).length;
+  int get flagged => items.where((d) => d.flags.isNotEmpty).length;
 
   factory HistoryMonth.fromJson(Map<String, dynamic> j) {
     final s = (j['summary'] as Map).cast<String, dynamic>();

@@ -190,7 +190,7 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
             Text(
               office.strict
                   ? 'Area absen ${office.radiusM} m. Lokasi ini memakai mode ketat, jadi absen hanya bisa di dalam area.'
-                  : 'Area absen ${office.radiusM} m. Kamu tetap bisa absen, tapi HR akan meninjaunya dulu. Tulis alasan singkat ya.',
+                  : 'Area absen ${office.radiusM} m. Kamu tetap bisa absen, absennya diberi tanda "di luar radius". Tulis alasan singkat ya.',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.muted, height: 1.55),
             ),
@@ -206,7 +206,7 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
             if (!office.strict)
               FilledButton(
                 onPressed: () => setState(() => _step = _Step.camera),
-                child: const Text('Tetap absen, kirim ke HR'),
+                child: const Text('Tetap absen'),
               ),
             const SizedBox(height: 10),
             OutlinedButton(onPressed: _check, child: const Text('Coba lagi saat sudah dekat')),
@@ -377,11 +377,11 @@ class _ClockFlowPageState extends ConsumerState<ClockFlowPage> {
                 ]),
               ),
             ),
-            if (r.needsReview)
+            if (r.flagged)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
                 child: Text(
-                  'Ditandai untuk ditinjau HR: ${r.flagLabels.join(', ')}.',
+                  'Diberi tanda: ${r.flagLabels.join(', ')}.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppColors.warning, fontWeight: FontWeight.w600, fontSize: 13),
                 ),
