@@ -138,15 +138,20 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = Container(
-      padding: padding,
-      decoration: BoxDecoration(
+    // Material sendiri (bukan sekadar Container putih) supaya Ink/InkWell di
+    // dalam kartu dilukis di atas kartu, bukan tertutup olehnya.
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(radius),
+      side: const BorderSide(color: AppColors.line),
+    );
+    final box = DecoratedBox(
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(radius), boxShadow: AppColors.cardShadow),
+      child: Material(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: AppColors.line),
-        boxShadow: AppColors.cardShadow,
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+        child: Padding(padding: padding, child: child),
       ),
-      child: child,
     );
     if (onTap == null) return box;
     return GestureDetector(onTap: onTap, behavior: HitTestBehavior.opaque, child: box);

@@ -81,21 +81,61 @@ class T2Card extends StatelessWidget {
 
 /// Lingkaran inisial navy dengan huruf kuning (atau foto bila ada).
 class PersonAvatar extends StatelessWidget {
-  const PersonAvatar({super.key, required this.person, this.size = 42});
+  const PersonAvatar({super.key, required this.person, this.size = 42, this.online, this.ringColor = Colors.white});
   final Map<String, dynamic>? person;
   final double size;
+
+  /// true = titik hijau, false = titik abu-abu, null = tanpa titik.
+  final bool? online;
+  final Color ringColor;
 
   @override
   Widget build(BuildContext context) {
     final initials = (person?['initials'] ?? '?') as String;
     final photo = person?['photo_url'] as String?;
-    return CircleAvatar(
+    final avatar = CircleAvatar(
       radius: size / 2,
       backgroundColor: AppColors.navy,
       foregroundImage: photo != null ? NetworkImage(photo) : null,
+      onForegroundImageError: photo != null ? (_, _) {} : null,
       child: Text(initials, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700, fontSize: size * .34)),
     );
+    if (online == null) return avatar;
+    final dot = (size * .3).clamp(10.0, 20.0);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(clipBehavior: Clip.none, children: [
+        avatar,
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: Container(
+            width: dot,
+            height: dot,
+            decoration: BoxDecoration(
+              color: online! ? const Color(0xFF17B26A) : AppColors.inputLine,
+              shape: BoxShape.circle,
+              border: Border.all(color: ringColor, width: dot * .2),
+            ),
+          ),
+        ),
+      ]),
+    );
   }
+}
+
+/// Konten dibatasi lebarnya di tablet/layar lebar supaya tetap enak dibaca.
+class MaxWidth extends StatelessWidget {
+  const MaxWidth({super.key, required this.child, this.width = 640});
+  final Widget child;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) => Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: width), child: child),
+      );
 }
 
 class PageTitle extends StatelessWidget {
@@ -202,6 +242,7 @@ class PrimaryButton extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.navy,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
         onPressed: busy ? null : onPressed,
@@ -209,7 +250,8 @@ class PrimaryButton extends StatelessWidget {
             ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
             : Row(mainAxisSize: MainAxisSize.min, children: [
                 if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)],
-                Text(label),
+                // Mengecil di HP sempit alih-alih terpotong/overflow.
+                Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1))),
               ]),
       ),
     );

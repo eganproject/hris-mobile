@@ -15,7 +15,7 @@ kantor memakai tablet pengenalan wajah, gudang memakai mesin absen.
 - Pengajuan cuti/izin/sakit, lembur, tukar jadwal, koreksi.
 - Info: pengumuman HR dan rekan kerja (cari, status aktif).
 - Tim (atasan): tim hari ini, persetujuan, atur jadwal tim, struktur.
-- Profil: data diri, struktur organisasi, notifikasi, keluar.
+- Profil: foto profil (kamera/galeri), data diri, struktur organisasi, notifikasi, keluar.
 Rute fitur di `lib/features/tahap2_routes.dart`.
 
 Tampilan (desain ulang 26 Nov 2026) selaras dengan HRIS web dan tablet:
@@ -35,7 +35,7 @@ flutter pub get
 flutter run --dart-define=API_BASE_URL=https://alamat-hris-anda
 flutter build apk --release --dart-define=API_BASE_URL=https://alamat-hris-anda
 ```
-Tanpa `API_BASE_URL`, aplikasi memakai `http://10.0.2.2:8000` (Laravel lokal dari emulator Android).
+Tanpa `API_BASE_URL`, aplikasi memakai `https://cok-hris.com`. Untuk Laravel lokal dari emulator Android pakai `--dart-define=API_BASE_URL=http://10.0.2.2:8000`.
 
 ## Tes
 ```

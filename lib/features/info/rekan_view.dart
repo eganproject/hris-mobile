@@ -120,6 +120,8 @@ class _PersonRow extends StatelessWidget {
       onTap: () => showModalBottomSheet(
         context: context,
         showDragHandle: true,
+        isScrollControlled: true,
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .85),
         backgroundColor: Colors.white,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
         builder: (_) => _PersonSheet(id: p['id'] as int, summary: p),
@@ -184,7 +186,7 @@ class _PersonSheet extends ConsumerWidget {
           );
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           PersonAvatar(person: d, size: 72),

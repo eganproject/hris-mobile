@@ -101,7 +101,7 @@ class _RiwayatView extends ConsumerWidget {
                 _stat(history.value?.present, 'Hadir'),
                 _stat(history.value?.late, 'Terlambat'),
                 _stat(history.value?.absent, 'Alpa'),
-                _stat(history.value?.reviewed, 'Ditinjau'),
+                _stat(history.value?.flagged, 'Bertanda'),
               ]),
             ]),
           ),
@@ -177,7 +177,7 @@ class _RiwayatView extends ConsumerWidget {
     final label = working
         ? 'Bekerja'
         : d.flags.isNotEmpty
-            ? 'Ditinjau'
+            ? 'Bertanda'
             : (d.status == 'late' && d.lateMinutes > 0 ? 'Telat ${d.lateMinutes} mnt' : d.statusLabel);
 
     return AppCard(
