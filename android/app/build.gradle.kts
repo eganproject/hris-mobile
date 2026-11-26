@@ -48,3 +48,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// google-services.json tidak disimpan di repo: workflow Build APK menulisnya dari
+// secret GOOGLE_SERVICES_JSON. Tanpa file itu APK tetap jadi, hanya tanpa push.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}

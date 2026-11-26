@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'core/push/push_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
@@ -9,6 +10,7 @@ class HrisApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(pushRegistrarProvider);
     return MaterialApp.router(
       title: 'HRIS Cahaya Optima Karya',
       debugShowCheckedModeBanner: false,

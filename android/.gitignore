@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Konfigurasi Firebase ditulis oleh workflow dari secret, jangan di-commit.
+app/google-services.json
