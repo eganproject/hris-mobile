@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
+import '../t2_common/search_select.dart';
 import '../t2_common/t2_ui.dart';
 import 'pengajuan_providers.dart';
 
@@ -127,10 +128,12 @@ class _LeaveFormPageState extends ConsumerState<LeaveFormPage> {
                       const EmptyNote('Jenis pengajuan ini belum disiapkan HR.')
                     else ...[
                       if (ofCategory.length > 1) ...[
-                        DropdownButtonFormField<int>(
-                          initialValue: type['id'] as int?,
-                          decoration: t2Input('Jenis'),
-                          items: [for (final t in ofCategory) DropdownMenuItem(value: t['id'] as int, child: Text(t['name'] as String))],
+                        SearchSelectField<int>(
+                          label: 'Jenis',
+                          sheetTitle: 'Pilih jenis $_category',
+                          searchHint: 'Cari jenis…',
+                          value: type['id'] as int?,
+                          options: [for (final t in ofCategory) SelectOption(t['id'] as int, t['name'] as String)],
                           onChanged: (v) => setState(() => _typeId = v),
                         ),
                         if (_err('leave_type_id') != null) _ErrorText(_err('leave_type_id')!),
@@ -173,16 +176,20 @@ class _LeaveFormPageState extends ConsumerState<LeaveFormPage> {
                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 8),
                       Row(children: [
-                        OutlinedButton.icon(
-                          onPressed: () => _pickAttachment(ImageSource.camera),
-                          icon: const Icon(Icons.photo_camera_outlined),
-                          label: const Text('Kamera'),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _pickAttachment(ImageSource.camera),
+                            icon: const Icon(Icons.photo_camera_outlined),
+                            label: const Text('Kamera'),
+                          ),
                         ),
                         const SizedBox(width: 8),
-                        OutlinedButton.icon(
-                          onPressed: () => _pickAttachment(ImageSource.gallery),
-                          icon: const Icon(Icons.photo_outlined),
-                          label: const Text('Galeri'),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _pickAttachment(ImageSource.gallery),
+                            icon: const Icon(Icons.photo_outlined),
+                            label: const Text('Galeri'),
+                          ),
                         ),
                       ]),
                       if (_attachment != null)

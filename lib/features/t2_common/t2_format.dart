@@ -21,6 +21,13 @@ String dateLabel(dynamic v, {bool year = true}) {
   return '${dayShort(d)}, ${d.day} ${monthShort(d)}${year ? ' ${d.year}' : ''}';
 }
 
+/// "27 Sep" (tahun ini) atau "27 Sep 2025" — tanpa nama hari, untuk baris sempit.
+String shortDate(dynamic v) {
+  final d = parseDate(v);
+  if (d == null) return '-';
+  return '${d.day} ${monthShort(d)}${d.year == DateTime.now().year ? '' : ' ${d.year}'}';
+}
+
 /// "Sen 14 – Rab 16 Des"
 String rangeLabel(dynamic from, dynamic to) {
   final a = parseDate(from), b = parseDate(to);

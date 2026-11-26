@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/widgets/ui.dart';
@@ -127,6 +128,7 @@ class _MemberRow extends StatelessWidget {
     final sub = shift != null ? 'Shift ${shift['code'] ?? ''} · ${shift['start_time']}–${shift['end_time']}' : (schedule['label'] as String? ?? '');
 
     return T2Card(
+      onTap: emp['id'] == null ? null : () => context.push('/tim/anggota/${emp['id']}'),
       child: Row(children: [
         PersonAvatar(person: emp, size: 42),
         const SizedBox(width: 12),

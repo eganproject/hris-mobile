@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/config.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Warna bersama layar fitur. Nama "orange*" dipertahankan agar layar lama
@@ -49,7 +50,7 @@ class StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
       decoration: BoxDecoration(color: c.bg, borderRadius: BorderRadius.circular(99)),
-      child: Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: c.fg)),
+      child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: c.fg)),
     );
   }
 }
@@ -64,19 +65,27 @@ class T2Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = Container(
-      padding: padding,
-      decoration: BoxDecoration(
+    final r = BorderRadius.circular(radius);
+    return DecoratedBox(
+      decoration: BoxDecoration(borderRadius: r, boxShadow: AppColors.cardShadow),
+      child: Material(
         color: color ?? Colors.white,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: AppColors.line),
-        boxShadow: AppColors.cardShadow,
+        shape: RoundedRectangleBorder(borderRadius: r, side: const BorderSide(color: AppColors.line)),
+        clipBehavior: Clip.antiAlias,
+        child: onTap == null
+            ? Padding(padding: padding, child: child)
+            : InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
       ),
-      child: child,
     );
-    if (onTap == null) return box;
-    return GestureDetector(onTap: onTap, behavior: HitTestBehavior.opaque, child: box);
   }
+}
+
+/// Alamat lengkap untuk berkas dari server. Server lama mengirim alamat foto
+/// tanpa domain ("/storage/..."), yang tidak bisa dibuka aplikasi.
+String? absoluteUrl(String? url) {
+  if (url == null || url.isEmpty) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return '${AppConfig.apiBaseUrl}${url.startsWith('/') ? '' : '/'}$url';
 }
 
 /// Lingkaran inisial navy dengan huruf kuning (atau foto bila ada).
@@ -92,11 +101,13 @@ class PersonAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initials = (person?['initials'] ?? '?') as String;
-    final photo = person?['photo_url'] as String?;
+    final photo = absoluteUrl(person?['photo_url'] as String?);
+    // Foto di-decode seukuran avatar saja supaya daftar panjang tetap ringan.
+    final px = (size * MediaQuery.devicePixelRatioOf(context)).round();
     final avatar = CircleAvatar(
       radius: size / 2,
       backgroundColor: AppColors.navy,
-      foregroundImage: photo != null ? NetworkImage(photo) : null,
+      foregroundImage: photo != null ? ResizeImage(NetworkImage(photo), width: px, height: px, policy: ResizeImagePolicy.fit) : null,
       onForegroundImageError: photo != null ? (_, _) {} : null,
       child: Text(initials, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700, fontSize: size * .34)),
     );
@@ -220,7 +231,12 @@ class BackHeader extends StatelessWidget {
             if (subtitle != null) Text(subtitle!, style: const TextStyle(fontSize: 13, color: T2Colors.muted)),
           ]),
         ),
-        ?trailing,
+        // Aksi di kanan mengecil di HP sempit alih-alih mendesak judul.
+        if (trailing != null)
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 150),
+            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerRight, child: trailing),
+          ),
       ]),
     );
   }
@@ -243,7 +259,8 @@ class PrimaryButton extends StatelessWidget {
           backgroundColor: AppColors.navy,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          // Turunan dari tema supaya tetap memakai Inter (TextStyle polos jatuh ke font bawaan).
+          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
         ),
         onPressed: busy ? null : onPressed,
         child: busy
