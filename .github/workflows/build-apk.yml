@@ -11,6 +11,10 @@ on:
         required: true
   push:
     branches: ['**']
+    # Aplikasi tablet punya workflow sendiri (build-apk-tablet.yml).
+    paths-ignore:
+      - 'tablet/**'
+      - '.github/workflows/build-apk-tablet.yml'
 
 jobs:
   build:
