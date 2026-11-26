@@ -136,6 +136,7 @@ class _HomePageState extends State<HomePage> {
 
   void _setPhase(_Phase p) {
     if (!mounted) return;
+    if (p == _Phase.unknown && _phase != _Phase.unknown) unawaited(Sounds.instance.unknown());
     setState(() => _phase = p);
     _idleTimer?.cancel();
     if (p == _Phase.unknown || p == _Phase.pin || p == _Phase.confirm) {

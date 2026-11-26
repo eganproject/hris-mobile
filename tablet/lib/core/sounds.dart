@@ -2,7 +2,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
 /// Suara saat absen berhasil (dibuat di ElevenLabs, disetujui Ega 2026-11-27):
-/// masuk = "Bekerja yang keras ya!", pulang = "Terima kasih, hati-hati di jalan."
+/// masuk = "Bekerja yang keras ya!", pulang = "Terima kasih, hati-hati di jalan.",
+/// wajah tidak cocok = "Ups, wajah tidak dikenali."
 class Sounds {
   Sounds._();
   static final Sounds instance = Sounds._();
@@ -13,6 +14,16 @@ class Sounds {
     try {
       await _player.setReleaseMode(ReleaseMode.stop);
       await _player.setPlayerMode(PlayerMode.lowLatency);
+    } catch (e) {
+      debugPrint('suara: $e');
+    }
+  }
+
+  /// Wajah tidak cocok: "Ups, wajah tidak dikenali."
+  Future<void> unknown() async {
+    try {
+      await _player.stop();
+      await _player.play(AssetSource('sounds/tidak_dikenali.mp3'));
     } catch (e) {
       debugPrint('suara: $e');
     }
