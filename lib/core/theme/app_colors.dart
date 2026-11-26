@@ -1,46 +1,60 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Warna final (Ega, 25 Nov 2026): oranye utama, navy aksen.
+/// Warna desain ulang (Ega, 26 Nov 2026), selaras dengan HRIS web & tablet:
+/// navy utama, kuning sebagai aksen, latar abu muda bertitik.
 class AppColors {
-  static const primary = Color(0xFFEA7F06);
-  static const primaryDark = Color(0xFF9A4A05);
-  static const primarySoft = Color(0xFFFDEBD3);
-  static const gradientStart = Color(0xFFFBB040);
-  static const gradientEnd = Color(0xFFC2560A);
   static const navy = Color(0xFF16255A);
-  static const navyLight = Color(0xFF3A5AA8);
-  static const logoDot = Color(0xFFF5A623);
+  static const navyDark = Color(0xFF0B1640);
+  static const navyLight = Color(0xFF2A3C7A);
+  static const navySoft = Color(0xFFEEF1F8);
 
-  static const background = Color(0xFFF4F6FA);
+  static const accent = Color(0xFFF9AE05);
+  static const accentSoft = Color(0xFFFEF6E0);
+  static const accentText = Color(0xFFB47A00);
+
+  /// Nama lama dipertahankan agar layar lain tetap jalan; sekarang navy.
+  static const primary = navy;
+  static const primaryDark = navyDark;
+  static const primarySoft = navySoft;
+  static const logoDot = accent;
+
+  static const background = Color(0xFFF3F5F9);
+  static const dot = Color(0xFFDDE2EC);
   static const surface = Colors.white;
-  static const ink = Color(0xFF0F1733);
-  static const muted = Color(0xFF5B6478);
-  static const faint = Color(0xFF98A1B5);
-  static const line = Color(0xFFE5E9F2);
-  static const chip = Color(0xFFEEF1F6);
+  static const ink = Color(0xFF101828);
+  static const muted = Color(0xFF667085);
+  static const faint = Color(0xFF98A2B3);
+  static const line = Color(0xFFEAECF0);
+  static const inputLine = Color(0xFFD0D5DD);
+  static const chip = Color(0xFFF2F4F7);
+  static const chipText = Color(0xFF344054);
 
-  static const success = Color(0xFF166534);
-  static const successSoft = Color(0xFFDCFCE7);
-  static const warning = Color(0xFF9A3412);
-  static const warningSoft = Color(0xFFFFF7ED);
-  static const danger = Color(0xFFB91C1C);
-  static const dangerSoft = Color(0xFFFEE2E2);
+  static const success = Color(0xFF067647);
+  static const successSoft = Color(0xFFECFDF3);
+  static const info = Color(0xFF175CD3);
+  static const infoSoft = Color(0xFFEFF8FF);
+  static const warning = accentText;
+  static const warningSoft = accentSoft;
+  static const danger = Color(0xFFB42318);
+  static const dangerSoft = Color(0xFFFEF3F2);
 
   static const headerGradient = LinearGradient(
-    begin: Alignment(-0.6, -1),
-    end: Alignment(0.6, 1),
-    colors: [gradientStart, primary, gradientEnd],
-    stops: [0, 0.45, 1],
-  );
-
-  static const navyGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [navyLight, navy],
+    colors: [navyLight, navy, navyDark],
+    stops: [0, .5, 1],
   );
 
+  static const navyGradient = headerGradient;
+
+  /// Bayangan kartu putih: tipis dan lembut.
   static const cardShadow = [
-    BoxShadow(color: Color(0x14111C45), blurRadius: 30, offset: Offset(0, 10)),
-    BoxShadow(color: Color(0x0A111C45), blurRadius: 6, offset: Offset(0, 2)),
+    BoxShadow(color: Color(0x0A101828), blurRadius: 2, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x14101828), blurRadius: 24, offset: Offset(0, 8), spreadRadius: -12),
+  ];
+
+  /// Bayangan kartu navy utama.
+  static const heroShadow = [
+    BoxShadow(color: Color(0x9916255A), blurRadius: 30, offset: Offset(0, 14), spreadRadius: -12),
   ];
 }

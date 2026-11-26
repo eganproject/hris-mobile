@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import 'info/info_page.dart';
 import 'jadwal/jadwal_page.dart';
 import 'notifikasi/notifikasi_page.dart';
 import 'organisasi/struktur_page.dart';
@@ -17,9 +18,9 @@ import 'tim/tim_hari_ini_page.dart';
 ///
 /// Pengajuan: /pengajuan/cuti?kategori=cuti|izin|sakit, /pengajuan/lembur,
 /// /pengajuan/tukar?date=YYYY-MM-DD, /pengajuan/semua.
-/// Lainnya: /jadwal, /notifikasi, /profil/data-diri, /struktur.
+/// Lainnya: /jadwal, /notifikasi, /profil/data-diri, /struktur, /rekan.
 /// Atasan: /tim/persetujuan, /tim/hari-ini, /tim/jadwal.
-/// Pengumuman HR: /pengumuman/:id (daftarnya ada di menu bawah /pengumuman).
+/// Pengumuman HR: /pengumuman/:id (daftarnya ada di tab Info).
 final List<RouteBase> tahap2Routes = [
   GoRoute(
     path: '/pengajuan/cuti',
@@ -35,6 +36,7 @@ final List<RouteBase> tahap2Routes = [
   GoRoute(path: '/notifikasi', builder: (_, _) => const NotifikasiPage()),
   GoRoute(path: '/profil/data-diri', builder: (_, _) => const DataDiriPage()),
   GoRoute(path: '/struktur', builder: (_, _) => const StrukturPage()),
+  GoRoute(path: '/rekan', builder: (_, _) => const RekanPage()),
   GoRoute(path: '/tim/persetujuan', builder: (_, _) => const PersetujuanPage()),
   GoRoute(path: '/tim/hari-ini', builder: (_, _) => const TimHariIniPage()),
   GoRoute(path: '/tim/jadwal', builder: (_, _) => const JadwalTimPage()),

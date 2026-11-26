@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/widgets/ui.dart';
 import '../t2_common/async_body.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
@@ -57,9 +58,8 @@ class NotifikasiPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final list = ref.watch(notificationsProvider);
 
-    return Scaffold(
-      backgroundColor: T2Colors.bg,
-      body: SafeArea(
+    return DotScaffold(
+      child: SafeArea(
         child: Column(children: [
           BackHeader(
             title: 'Notifikasi',

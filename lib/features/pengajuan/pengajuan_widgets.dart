@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
 import '../t2_common/t2_ui.dart';
@@ -10,17 +11,17 @@ import 'pengajuan_providers.dart';
 ({IconData icon, Color bg, Color fg}) categoryStyle(String? category) {
   switch (category) {
     case 'izin':
-      return (icon: Icons.back_hand_outlined, bg: const Color(0xFFFEF3C7), fg: const Color(0xFFB45309));
+      return (icon: Icons.back_hand_outlined, bg: AppColors.accentSoft, fg: AppColors.accentText);
     case 'sakit':
-      return (icon: Icons.thermostat_outlined, bg: const Color(0xFFFEE2E2), fg: const Color(0xFFB91C1C));
+      return (icon: Icons.thermostat_outlined, bg: AppColors.dangerSoft, fg: AppColors.danger);
     case 'lembur':
-      return (icon: Icons.nightlight_outlined, bg: const Color(0xFFE0E7FF), fg: const Color(0xFF4338CA));
+      return (icon: Icons.nightlight_outlined, bg: AppColors.navySoft, fg: AppColors.navy);
     case 'tukar':
-      return (icon: Icons.swap_horiz_rounded, bg: const Color(0xFFE0F2FE), fg: const Color(0xFF0369A1));
+      return (icon: Icons.swap_horiz_rounded, bg: AppColors.infoSoft, fg: AppColors.info);
     case 'koreksi':
-      return (icon: Icons.edit_note_rounded, bg: const Color(0xFFEDE9FE), fg: const Color(0xFF6D28D9));
+      return (icon: Icons.edit_note_rounded, bg: AppColors.chip, fg: AppColors.chipText);
     default:
-      return (icon: Icons.wb_sunny_outlined, bg: T2Colors.orangeSoft, fg: T2Colors.orangeText);
+      return (icon: Icons.wb_sunny_outlined, bg: AppColors.successSoft, fg: AppColors.success);
   }
 }
 

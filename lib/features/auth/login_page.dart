@@ -51,68 +51,70 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final auth = ref.watch(authControllerProvider);
     final notice = auth is AuthSignedOut ? auth.message : null;
 
+    const label = TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.chipText);
+
     return Scaffold(
-      body: Stack(children: [
-        const GradientHeaderBackground(height: 430, radius: 44),
-        SafeArea(
+      body: DotBackground(
+        child: SafeArea(
           child: ListView(
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(28, 36, 28, 0),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Row(children: [
-                    CompanyLogo(),
-                    SizedBox(width: 12),
-                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Cahaya Optima Karya', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-                      Text('HRIS · Karyawan', style: TextStyle(color: Color(0xD9FFFFFF), fontSize: 12.5, fontWeight: FontWeight.w600)),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.navy,
+                  borderRadius: BorderRadius.circular(26),
+                  boxShadow: AppColors.heroShadow,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: const Stack(children: [
+                  Positioned(top: -70, right: -80, child: YellowRing(size: 240, width: 20)),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(24, 32, 24, 28),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      CompanyLogo(size: 60),
+                      SizedBox(height: 22),
+                      Text('HRIS Cahaya Optima Karya',
+                          style: TextStyle(color: AppColors.accent, fontSize: 13, fontWeight: FontWeight.w600)),
+                      SizedBox(height: 6),
+                      Text('Urusan kantor,\ncukup dari HP.',
+                          style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.5)),
+                      SizedBox(height: 8),
+                      Text('Lihat kehadiran, ajukan cuti, izin, dan lembur.',
+                          style: TextStyle(color: Color(0xB3FFFFFF), fontSize: 13.5, height: 1.5)),
                     ]),
-                  ]),
-                  const SizedBox(height: 22),
-                  const Text('Urusan kantor\ndari HP kamu',
-                      style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, height: 1.15, letterSpacing: -0.5)),
-                  const SizedBox(height: 10),
-                  const Text('Lihat kehadiran, ajukan cuti, izin, dan lembur.',
-                      style: TextStyle(color: Color(0xE0FFFFFF), fontSize: 15, height: 1.5)),
+                  ),
                 ]),
               ),
-              Container(
-                margin: const EdgeInsets.fromLTRB(20, 34, 20, 0),
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: const [BoxShadow(color: Color(0x24111C45), blurRadius: 44, offset: Offset(0, 20))],
-                ),
+              const SizedBox(height: 16),
+              AppCard(
+                padding: const EdgeInsets.all(20),
+                radius: 22,
                 child: AutofillGroup(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     if (notice != null) ...[
                       _banner(notice, AppColors.warningSoft, AppColors.warning),
                       const SizedBox(height: 14),
                     ],
-                    const Text('Email atau NIK', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 7),
+                    const Text('NIK atau email', style: label),
+                    const SizedBox(height: 6),
                     TextField(
                       controller: _login,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.username, AutofillHints.email],
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline)),
                     ),
                     const SizedBox(height: 14),
-                    const Text('Kata sandi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 7),
+                    const Text('Kata sandi', style: label),
+                    const SizedBox(height: 6),
                     TextField(
                       controller: _password,
                       obscureText: _obscure,
                       autofillHints: const [AutofillHints.password],
                       onSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.key_outlined),
                         suffixIcon: IconButton(
                           tooltip: _obscure ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi',
-                          icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                          icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 20),
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
@@ -123,32 +125,54 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ],
                     const SizedBox(height: 18),
                     FilledButton(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
                       onPressed: _loading ? null : _submit,
                       child: _loading
                           ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                          : const Text('Masuk'),
+                          : const Row(mainAxisSize: MainAxisSize.min, children: [
+                              Text('Masuk'),
+                              SizedBox(width: 8),
+                              Icon(Icons.arrow_forward_rounded, size: 18),
+                            ]),
                     ),
+                    const SizedBox(height: 14),
+                    const Text('Lupa kata sandi? Hubungi HR.',
+                        textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.muted)),
                   ]),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(30, 28, 30, 30),
-                child: Text(
-                  'Pakai akun yang sama dengan HRIS web. Lupa kata sandi atau belum punya akun? Hubungi HR.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12.5, color: AppColors.muted, height: 1.5),
-                ),
+              const SizedBox(height: 16),
+              AppCard(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(color: AppColors.accentSoft, borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.tablet_android_outlined, size: 19, color: AppColors.accentText),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Absen masuk dan pulang dilakukan di tablet kantor atau mesin gudang, bukan dari aplikasi ini.',
+                      style: TextStyle(fontSize: 12.5, color: Color(0xFF475467), height: 1.5),
+                    ),
+                  ),
+                ]),
               ),
             ],
           ),
         ),
-      ]),
+      ),
     );
   }
 
   Widget _banner(String text, Color bg, Color fg) => Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
         child: Text(text, style: TextStyle(color: fg, fontWeight: FontWeight.w600, height: 1.45)),
       );
 }

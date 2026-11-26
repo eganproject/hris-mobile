@@ -8,8 +8,7 @@ import '../../core/widgets/ui.dart';
 import '../t2_common/t2_ui.dart';
 import 'profil_providers.dart';
 
-/// Tab Profil: identitas, menu atasan (hanya bila punya bawahan), menu akun,
-/// dan keluar.
+/// Tab Profil: identitas, menu akun, dan keluar. Menu atasan ada di tab Tim.
 class ProfilPage extends ConsumerWidget {
   const ProfilPage({super.key});
 
@@ -18,136 +17,116 @@ class ProfilPage extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     if (user == null) return const SizedBox.shrink();
     final e = user.employee;
-    final profile = ref.watch(profileProvider);
-    final p = profile.asData?.value;
+    final p = ref.watch(profileProvider).asData?.value;
     final isLeader = (p?['is_leader'] as bool?) ?? user.isLeader;
-    final leader = p?['leader'] is Map ? Map<String, dynamic>.from(p!['leader'] as Map) : null;
-    final pending = (leader?['pending_approvals'] as num?)?.toInt() ?? 0;
-    final teamSize = (leader?['team_size'] as num?)?.toInt();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: RefreshIndicator(
-        color: AppColors.primary,
+    return DotScaffold(
+      child: RefreshIndicator(
+        color: AppColors.navy,
         onRefresh: () async => ref.invalidate(profileProvider),
         child: ListView(
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
           children: [
-            Stack(children: [
-              const GradientHeaderBackground(height: 210),
-              SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                  child: Column(children: [
-                    CircleAvatar(
-                      radius: 42,
-                      backgroundColor: Colors.white,
-                      child: Text(user.initials,
-                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(e.fullName,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
-                    const SizedBox(height: 2),
-                    Text(
-                      [e.jobPosition, if (e.number != null) 'NIK ${e.number}'].whereType<String>().join(' · '),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
-                    ),
-                    const SizedBox(height: 22),
-                  ]),
+            const TabHeader(title: 'Profil', padding: EdgeInsets.only(top: 12)),
+            const SizedBox(height: 16),
+            NavyHeroCard(
+              child: Row(children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: AppColors.accent,
+                  foregroundImage: e.photoUrl != null ? NetworkImage(e.photoUrl!) : null,
+                  child: Text(user.initials,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.navy)),
                 ),
-              ),
-            ]),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                if (isLeader) ...[
-                  const _GroupLabel('MENU ATASAN'),
-                  AppCard(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(children: [
-                      _MenuRow(
-                        icon: Icons.fact_check_outlined,
-                        title: 'Persetujuan',
-                        subtitle: 'Cuti, izin, sakit, dan lembur tim',
-                        badge: pending > 0 ? '$pending' : null,
-                        onTap: () => context.push('/tim/persetujuan'),
-                      ),
-                      _MenuRow(
-                        icon: Icons.groups_2_outlined,
-                        title: 'Tim hari ini',
-                        subtitle: teamSize == null ? 'Siapa yang sudah masuk' : '$teamSize anggota tim',
-                        onTap: () => context.push('/tim/hari-ini'),
-                      ),
-                      _MenuRow(
-                        icon: Icons.calendar_view_week_outlined,
-                        title: 'Atur jadwal tim',
-                        subtitle: 'Susun dan terbitkan jadwal mingguan',
-                        onTap: () => context.push('/tim/jadwal'),
-                        last: true,
-                      ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(e.fullName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
+                    if (e.jobPosition != null)
+                      Text(e.jobPosition!, style: const TextStyle(fontSize: 13, color: Color(0xCCFFFFFF))),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 6, runSpacing: 6, children: [
+                      if (e.number != null) StatusPill(label: 'NIK ${e.number}', tone: PillTone.onPrimary),
+                      if (e.branchName != null) StatusPill(label: e.branchName!, tone: PillTone.onPrimary),
+                      if (isLeader) const StatusPill(label: 'Atasan', tone: PillTone.accent),
                     ]),
-                  ),
-                  const SizedBox(height: 18),
-                ],
-                const _GroupLabel('AKUN'),
-                AppCard(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(children: [
-                    _MenuRow(
-                      icon: Icons.badge_outlined,
-                      title: 'Data diri',
-                      subtitle: 'Telepon, alamat, motto',
-                      onTap: () => context.push('/profil/data-diri'),
-                    ),
-                    _MenuRow(
-                      icon: Icons.account_tree_outlined,
-                      title: 'Struktur organisasi',
-                      subtitle: 'Atasan langsung dan tim di bawah Anda',
-                      onTap: () => context.push('/struktur'),
-                    ),
-                    _MenuRow(
-                      icon: Icons.event_note_outlined,
-                      title: 'Jadwal saya',
-                      subtitle: 'Shift minggu ini dan konfirmasi',
-                      onTap: () => context.push('/jadwal'),
-                    ),
-                    _MenuRow(
-                      icon: Icons.notifications_none_rounded,
-                      title: 'Notifikasi',
-                      onTap: () => context.push('/notifikasi'),
-                      last: true,
-                    ),
                   ]),
                 ),
-                const SizedBox(height: 18),
-                const SizedBox(height: 24),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final ok = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Keluar dari aplikasi?'),
-                        content: const Text('Kamu bisa masuk lagi kapan saja, dari HP mana saja.'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Keluar')),
-                        ],
-                      ),
-                    );
-                    if (ok == true) await ref.read(authControllerProvider.notifier).logout();
-                  },
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Keluar'),
-                ),
-                const SizedBox(height: 16),
-                const Text('Cahaya Optima Karya · HRIS',
-                    textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.faint)),
               ]),
             ),
+            const SizedBox(height: 22),
+            const _GroupLabel('AKUN'),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(children: [
+                _MenuRow(
+                  icon: Icons.badge_outlined,
+                  title: 'Data diri',
+                  subtitle: 'Telepon, alamat, motto',
+                  onTap: () => context.push('/profil/data-diri'),
+                ),
+                _MenuRow(
+                  icon: Icons.account_tree_outlined,
+                  title: 'Struktur organisasi',
+                  subtitle: [e.department, e.managerName == null ? null : 'Atasan: ${e.managerName}'].whereType<String>().join(' · '),
+                  onTap: () => context.push('/struktur'),
+                ),
+                if (isLeader)
+                  _MenuRow(
+                    icon: Icons.people_alt_outlined,
+                    title: 'Rekan kerja',
+                    subtitle: 'Cari rekan di seluruh kantor',
+                    onTap: () => context.push('/rekan'),
+                  ),
+                _MenuRow(
+                  icon: Icons.notifications_none_rounded,
+                  title: 'Notifikasi',
+                  onTap: () => context.push('/notifikasi'),
+                  last: true,
+                ),
+              ]),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.navySoft,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(Icons.info_outline, size: 19, color: AppColors.navy),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Absen masuk dan pulang dilakukan di tablet kantor atau mesin gudang. Aplikasi ini bisa dipakai dari HP mana saja.',
+                    style: TextStyle(fontSize: 12.5, color: AppColors.chipText, height: 1.45),
+                  ),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, side: const BorderSide(color: Color(0xFFFECDCA))),
+              onPressed: () async {
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Keluar dari aplikasi?'),
+                    content: const Text('Kamu bisa masuk lagi kapan saja, dari HP mana saja.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Keluar')),
+                    ],
+                  ),
+                );
+                if (ok == true) await ref.read(authControllerProvider.notifier).logout();
+              },
+              icon: const Icon(Icons.logout, size: 20),
+              label: const Text('Keluar'),
+            ),
+            const SizedBox(height: 16),
+            const Text('Cahaya Optima Karya · HRIS',
+                textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.faint)),
           ],
         ),
       ),
@@ -168,11 +147,10 @@ class _GroupLabel extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.icon, required this.title, this.subtitle, this.badge, required this.onTap, this.last = false});
+  const _MenuRow({required this.icon, required this.title, this.subtitle, required this.onTap, this.last = false});
   final IconData icon;
   final String title;
   final String? subtitle;
-  final String? badge;
   final VoidCallback onTap;
   final bool last;
 
@@ -190,23 +168,16 @@ class _MenuRow extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(13)),
-            child: Icon(icon, color: AppColors.primaryDark, size: 21),
+            decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: AppColors.navy, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-              if (subtitle != null) Text(subtitle!, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5)),
+              if (subtitle?.isNotEmpty ?? false) Text(subtitle!, style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
             ]),
           ),
-          if (badge != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              margin: const EdgeInsets.only(right: 6),
-              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(99)),
-              child: Text(badge!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
-            ),
           const Icon(Icons.chevron_right, color: T2Colors.faint),
         ]),
       ),

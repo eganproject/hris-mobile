@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/widgets/ui.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
 import '../t2_common/t2_ui.dart';
@@ -112,9 +113,8 @@ class _JadwalTimPageState extends ConsumerState<JadwalTimPage> {
     final days = [for (var i = 0; i < 7; i++) _weekStart.add(Duration(days: i))];
     final published = g?['published_at'] != null;
 
-    return Scaffold(
-      backgroundColor: T2Colors.bg,
-      body: SafeArea(
+    return DotScaffold(
+      child: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           BackHeader(title: 'Atur jadwal tim', subtitle: g == null ? null : '${g['team_size']} anggota${g['branch'] != null ? ' · ${g['branch']}' : ''}'),
           const SizedBox(height: 12),
