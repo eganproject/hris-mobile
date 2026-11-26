@@ -173,6 +173,7 @@ class PendingRecord {
     required this.capturedAt,
     required this.method,
     required this.predictedType,
+    this.requestedType,
     this.matchScore,
     this.matchMargin,
     this.livenessChecked = false,
@@ -190,6 +191,7 @@ class PendingRecord {
         capturedAt: DateTime.parse(j['captured_at'] as String),
         method: j['method'] as String? ?? 'face',
         predictedType: j['predicted_type'] as String? ?? 'in',
+        requestedType: j['requested_type'] as String?,
         matchScore: (j['match_score'] as num?)?.toDouble(),
         matchMargin: (j['match_margin'] as num?)?.toDouble(),
         livenessChecked: j['liveness_checked'] as bool? ?? false,
@@ -206,6 +208,9 @@ class PendingRecord {
   final DateTime capturedAt;
   final String method;
   final String predictedType;
+
+  /// Pilihan karyawan lewat tombol Absen Masuk / Absen Pulang (null = versi lama).
+  final String? requestedType;
   final double? matchScore;
   final double? matchMargin;
   final bool livenessChecked;
@@ -222,6 +227,7 @@ class PendingRecord {
         'captured_at': capturedAt.toUtc().toIso8601String(),
         'method': method,
         'predicted_type': predictedType,
+        'requested_type': requestedType,
         'match_score': matchScore,
         'match_margin': matchMargin,
         'liveness_checked': livenessChecked,

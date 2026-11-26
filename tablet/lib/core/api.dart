@@ -79,6 +79,7 @@ class TabletApi {
           'liveness_checked': r.livenessChecked ? '1' : '0',
           'liveness_score': ?r.livenessScore?.clamp(0, 1).toStringAsFixed(4),
           'not_me': r.notMe ? '1' : '0',
+          'requested_type': ?r.requestedType,
           if (r.photoPath != null && File(r.photoPath!).existsSync())
             'photo': await MultipartFile.fromFile(r.photoPath!, filename: 'bukti.jpg'),
         });

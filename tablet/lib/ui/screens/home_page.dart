@@ -18,7 +18,21 @@ import '../widgets/camera_panel.dart';
 import '../widgets/common.dart';
 import 'hr_menu_page.dart';
 
-enum _Phase { idle, scanning, result, unknown, pin }
+enum _Phase { idle, scanning, result, unknown, pin, confirm }
+
+/// Wajah/PIN sudah cocok tetapi pilihan Masuk/Pulang janggal: menunggu jawaban.
+class _Pending {
+  _Pending({required this.employee, required this.frame, required this.method, required this.at, required this.check, required this.chosen, this.score, this.margin, this.liveness});
+  final Employee employee;
+  final FrameData? frame;
+  final String method;
+  final DateTime at;
+  final ChoiceCheck check;
+  final String chosen;
+  final double? score;
+  final double? margin;
+  final double? liveness;
+}
 
 class _Result {
   _Result({
@@ -39,7 +53,8 @@ class _Result {
   final PendingRecord? record;
 }
 
-/// Layar utama tablet: absen otomatis tanpa tombol.
+/// Layar utama tablet: pilih Absen Masuk / Absen Pulang di atas (terpilih
+/// otomatis sesuai jam), lalu hadapkan wajah.
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.tablet, required this.camera, required this.engine});
   final TabletController tablet;
@@ -64,6 +79,11 @@ class _HomePageState extends State<HomePage> {
   final Map<int, DateTime> _cooldown = {};
   late ConsecutiveTracker _tracker;
 
+  // Tombol Absen Masuk / Absen Pulang. null = ikut jam (pilihan bawaan).
+  String? _manualChoice;
+  Timer? _choiceTimer;
+  _Pending? _pending;
+
   // NIK + PIN
   String _pinQuery = '';
   Employee? _pinEmployee;
@@ -86,6 +106,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _timer?.cancel();
     _idleTimer?.cancel();
+    _choiceTimer?.cancel();
     widget.tablet.removeListener(_onTablet);
     if (widget.camera.onFrame == _onFrame) widget.camera.onFrame = null;
     super.dispose();
@@ -95,13 +116,30 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
+  String get _choice => _manualChoice ?? widget.tablet.defaultChoiceAt(DateTime.now());
+
+  void _choose(String type) {
+    if (_phase == _Phase.result || _phase == _Phase.confirm) return;
+    setState(() => _manualChoice = type);
+    // Pilihan manual kembali ke otomatis bila tidak ada yang absen dalam 30 detik,
+    // supaya orang berikutnya tidak ikut mode yang salah.
+    _choiceTimer?.cancel();
+    _choiceTimer = Timer(const Duration(seconds: 30), _clearChoice);
+  }
+
+  void _clearChoice() {
+    _choiceTimer?.cancel();
+    if (!mounted) return;
+    setState(() => _manualChoice = null);
+  }
+
   void _setPhase(_Phase p) {
     if (!mounted) return;
     setState(() => _phase = p);
     _idleTimer?.cancel();
-    if (p == _Phase.unknown || p == _Phase.pin) {
-      // Kembali ke layar awal bila ditinggal.
-      _idleTimer = Timer(Duration(seconds: p == _Phase.pin ? 45 : 15), _reset);
+    if (p == _Phase.unknown || p == _Phase.pin || p == _Phase.confirm) {
+      // Kembali ke layar awal bila ditinggal. Pertanyaan yang tidak dijawab = tidak dicatat.
+      _idleTimer = Timer(Duration(seconds: p == _Phase.pin ? 45 : 15), p == _Phase.confirm ? _cancelPending : _reset);
     }
   }
 
@@ -118,7 +156,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _onFrame(FrameData frame) async {
     _lastFrame = frame;
-    if (_phase == _Phase.result || _phase == _Phase.pin) return;
+    if (_phase == _Phase.result || _phase == _Phase.pin || _phase == _Phase.confirm) return;
 
     final data = widget.tablet.data;
     if (data == null) return;
@@ -126,7 +164,7 @@ class _HomePageState extends State<HomePage> {
     if (_tracker.required != s.consecutiveFrames) _tracker = ConsecutiveTracker(s.consecutiveFrames);
 
     final obs = await widget.engine.analyze(frame, liveness: s.livenessEnabled);
-    if (!mounted || _phase == _Phase.result || _phase == _Phase.pin) return;
+    if (!mounted || _phase == _Phase.result || _phase == _Phase.pin || _phase == _Phase.confirm) return;
     final now = DateTime.now();
 
     if (obs.issue == FaceIssue.noFace) {
@@ -197,14 +235,43 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _commit(Employee employee, FrameData? frame, {required String method, double? score, double? margin, double? liveness}) async {
     final now = DateTime.now();
-    final predicted = widget.tablet.predict(employee, now);
+    final chosen = _choice;
+    final check = widget.tablet.checkChoice(employee, now, chosen);
 
-    if (predicted.ignored) {
-      _showResult(_Result(employee: employee, type: predicted.type, at: now, method: method, ignored: true, since: predicted.since), seconds: 3);
-      _cooldown[employee.id] = now.add(const Duration(seconds: 10));
-      return;
+    switch (check.outcome) {
+      case ChoiceOutcome.ignored:
+        _showResult(_Result(employee: employee, type: check.type, at: now, method: method, ignored: true, since: check.since), seconds: 3);
+        _cooldown[employee.id] = now.add(const Duration(seconds: 10));
+        return;
+      case ChoiceOutcome.alreadyIn:
+      case ChoiceOutcome.notIn:
+        _pending = _Pending(employee: employee, frame: frame, method: method, at: now, check: check, chosen: chosen, score: score, margin: margin, liveness: liveness);
+        _setPhase(_Phase.confirm);
+        return;
+      case ChoiceOutcome.record:
+        await _record(employee, frame, method: method, at: now, type: check.type, since: check.since, score: score, margin: margin, liveness: liveness);
     }
+  }
 
+  /// Jawaban pertanyaan: catat sebagai [type] (tanpa bertanya lagi).
+  Future<void> _answer(String type) async {
+    final p = _pending;
+    if (p == null) return;
+    _pending = null;
+    final since = type == 'out' ? p.check.since : null;
+    await _record(p.employee, p.frame, method: p.method, at: p.at, type: type, since: since, score: p.score, margin: p.margin, liveness: p.liveness);
+  }
+
+  void _cancelPending() {
+    final p = _pending;
+    _pending = null;
+    if (p != null) _cooldown[p.employee.id] = DateTime.now().add(const Duration(seconds: 6));
+    _clearChoice();
+    _reset();
+  }
+
+  Future<void> _record(Employee employee, FrameData? frame,
+      {required String method, required DateTime at, required String type, DateTime? since, double? score, double? margin, double? liveness}) async {
     final uuid = const Uuid().v4();
     String? photo;
     if (frame != null) {
@@ -220,9 +287,10 @@ class _HomePageState extends State<HomePage> {
       uuid: uuid,
       employeeId: employee.id,
       employeeName: employee.name,
-      capturedAt: now,
+      capturedAt: at,
       method: method,
-      predictedType: predicted.type,
+      predictedType: type,
+      requestedType: type,
       matchScore: score,
       matchMargin: margin,
       livenessChecked: liveness != null,
@@ -230,7 +298,7 @@ class _HomePageState extends State<HomePage> {
       photoPath: photo,
     );
 
-    _showResult(_Result(employee: employee, type: predicted.type, at: now, method: method, since: predicted.since, record: record), seconds: resultSeconds);
+    _showResult(_Result(employee: employee, type: type, at: at, method: method, since: since, record: record), seconds: resultSeconds);
   }
 
   void _showResult(_Result r, {required int seconds}) {
@@ -266,6 +334,7 @@ class _HomePageState extends State<HomePage> {
               capturedAt: record.capturedAt,
               method: record.method,
               predictedType: record.predictedType,
+              requestedType: record.requestedType,
               matchScore: record.matchScore,
               matchMargin: record.matchMargin,
               livenessChecked: record.livenessChecked,
@@ -279,6 +348,7 @@ class _HomePageState extends State<HomePage> {
     // Orang yang sama masih di depan kamera: jangan langsung dipindai ulang.
     _cooldown[r.employee.id] = DateTime.now().add(Duration(seconds: notMe ? 6 : 12));
     _result = null;
+    _clearChoice();
     _reset();
   }
 
@@ -337,10 +407,11 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: DottedBackground(
         child: Column(children: [
-          TabletHeader(tablet: widget.tablet, onLock: _phase == _Phase.result ? null : _openHr),
+          TabletHeader(tablet: widget.tablet, onLock: _phase == _Phase.result || _phase == _Phase.confirm ? null : _openHr),
+          Padding(padding: const EdgeInsets.fromLTRB(24, 20, 24, 0), child: _choiceBar()),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Expanded(flex: 58, child: _cameraPanel(data)),
                 const SizedBox(width: 24),
@@ -363,8 +434,8 @@ class _HomePageState extends State<HomePage> {
           topLeft: const GlassPill('Kamera aktif', dot: C.red),
           topRight: s.livenessEnabled ? const GlassPill('Cek wajah asli aktif', icon: Icons.shield_outlined) : null,
           bottom: HintCard(
-            title: data == null ? 'Menyiapkan data karyawan…' : 'Hadapkan wajah ke kamera',
-            subtitle: data == null ? 'Butuh internet untuk sinkron pertama' : 'Tidak perlu menekan apa pun',
+            title: data == null ? 'Menyiapkan data karyawan…' : 'Hadapkan wajah untuk ${_choice == 'in' ? 'Absen Masuk' : 'Absen Pulang'}',
+            subtitle: data == null ? 'Butuh internet untuk sinkron pertama' : 'Salah pilih? Ketuk tombol di atas',
           ),
         );
       case _Phase.scanning:
@@ -390,6 +461,14 @@ class _HomePageState extends State<HomePage> {
         );
       case _Phase.pin:
         return CameraPanel(camera: widget.camera, bracket: C.yellow, topLeft: const GlassPill('Absen pakai NIK + PIN', icon: Icons.pin_outlined), topRight: const GlassPill('Tetap difoto dan ditandai untuk HR'));
+      case _Phase.confirm:
+        final p = _pending;
+        return CameraPanel(
+          camera: widget.camera,
+          bracket: C.yellow,
+          topLeft: GlassPill(p == null ? 'Wajah cocok' : (p.method == 'pin' ? 'NIK + PIN' : 'Wajah cocok: ${p.employee.name}'), icon: Icons.check, solid: C.green),
+          topRight: const GlassPill('Belum dicatat'),
+        );
     }
   }
 
@@ -399,7 +478,137 @@ class _HomePageState extends State<HomePage> {
         _Phase.result => _resultSide(),
         _Phase.unknown => _unknownSide(),
         _Phase.pin => _pinSide(data),
+        _Phase.confirm => _confirmSide(),
       };
+
+  Widget _choiceBar() => LiveClock(
+        builder: (context, _) {
+          final chosen = _choice;
+          final locked = _phase == _Phase.result || _phase == _Phase.confirm;
+          return Row(children: [
+            Expanded(child: _choiceButton('in', 'Absen Masuk', 'Datang kerja', Icons.login_rounded, C.greenText, chosen == 'in', locked)),
+            const SizedBox(width: 16),
+            Expanded(child: _choiceButton('out', 'Absen Pulang', 'Selesai kerja', Icons.logout_rounded, C.navy, chosen == 'out', locked)),
+          ]);
+        },
+      );
+
+  Widget _choiceButton(String type, String label, String sub, IconData icon, Color color, bool selected, bool locked) {
+    final fg = selected ? Colors.white : const Color(0xFF344054);
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? color : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: selected ? color : const Color(0xFFD0D5DD), width: 2),
+        ),
+        elevation: selected ? 6 : 0,
+        shadowColor: color.withValues(alpha: 0.5),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: locked ? null : () => _choose(type),
+          child: SizedBox(
+            height: 84,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: Row(children: [
+                Icon(icon, size: 28, color: fg),
+                const SizedBox(width: 16),
+                Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(label, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: fg)),
+                  Text(sub, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? const Color(0xCCFFFFFF) : C.muted)),
+                ]),
+                const Spacer(),
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: selected ? Colors.white : null,
+                    border: selected ? null : Border.all(color: const Color(0xFFD0D5DD), width: 2),
+                  ),
+                  child: selected ? Icon(Icons.check, size: 18, color: color) : null,
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _confirmSide() {
+    final p = _pending;
+    if (p == null) return const SizedBox.shrink();
+    final e = p.employee;
+    final alreadyIn = p.check.outcome == ChoiceOutcome.alreadyIn;
+    final title = alreadyIn ? 'Sudah absen masuk hari ini' : 'Belum absen masuk hari ini';
+    final body = alreadyIn
+        ? 'Kamu memilih Absen Masuk, padahal sudah tercatat masuk pukul ${hm(p.check.since ?? p.at)}. Mau dicatat sebagai absen pulang?'
+        : 'Kamu memilih Absen Pulang, padahal belum ada absen masuk hari ini. Mau dicatat sebagai apa?';
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      CardBox(
+        padding: EdgeInsets.zero,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+            height: 84,
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            decoration: const BoxDecoration(color: C.yellowSoft, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                width: 24,
+                height: 24,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(color: C.yellow, shape: BoxShape.circle),
+                child: const Text('!', style: TextStyle(color: C.navy, fontWeight: FontWeight.w800)),
+              ),
+              const SizedBox(width: 8),
+              Text(title, style: const TextStyle(color: Color(0xFF93370D), fontSize: 14, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+          Transform.translate(
+            offset: const Offset(0, -30),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Avatar(e.initials, size: 76, bg: C.navy, fg: C.yellow, border: true),
+                const SizedBox(height: 12),
+                const Text('Halo,', style: TextStyle(fontSize: 15, color: C.muted)),
+                Text(e.name, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                const SizedBox(height: 14),
+                Text(body, style: const TextStyle(fontSize: 16, height: 1.5, color: Color(0xFF344054))),
+                const SizedBox(height: 18),
+                if (alreadyIn)
+                  Row(children: [
+                    Expanded(child: FilledButton(onPressed: () => _answer('out'), style: FilledButton.styleFrom(minimumSize: const Size(0, 56), backgroundColor: C.navy), child: const Text('Ya, catat pulang'))),
+                    const SizedBox(width: 12),
+                    Expanded(child: OutlinedButton(onPressed: _cancelPending, style: OutlinedButton.styleFrom(minimumSize: const Size(0, 56)), child: const Text('Batal'))),
+                  ])
+                else ...[
+                  Row(children: [
+                    Expanded(child: FilledButton(onPressed: () => _answer('in'), style: FilledButton.styleFrom(minimumSize: const Size(0, 56), backgroundColor: C.greenText), child: const Text('Catat masuk'))),
+                    const SizedBox(width: 12),
+                    Expanded(child: FilledButton(onPressed: () => _answer('out'), style: FilledButton.styleFrom(minimumSize: const Size(0, 56), backgroundColor: C.navy), child: const Text('Tetap catat pulang'))),
+                  ]),
+                  const SizedBox(height: 10),
+                  OutlinedButton(onPressed: _cancelPending, style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)), child: const Text('Batal')),
+                ],
+              ]),
+            ),
+          ),
+        ]),
+      ),
+      const Spacer(),
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: C.border)),
+        child: const Text('Tidak ada yang dicatat kalau tidak dipilih.', style: TextStyle(fontSize: 13, color: C.muted)),
+      ),
+    ]);
+  }
 
   Widget _idleSide(SyncData? data) {
     final recent = widget.tablet.recent();

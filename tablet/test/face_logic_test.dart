@@ -164,4 +164,52 @@ void main() {
       expect(punctualityLabel(e, DateTime(2026, 11, 26, 8, 25)), 'Terlambat 25 menit');
     });
   });
+
+  group('tombol Absen Masuk / Absen Pulang', () {
+    const s = TabletSettings();
+    final pagi = DateTime(2026, 11, 26, 7, 50);
+    final sore = DateTime(2026, 11, 26, 17, 5);
+
+    test('pilih masuk saat belum absen = dicatat masuk', () {
+      final c = checkChosen(emp(), const [], pagi, s, 'in');
+      expect(c.outcome, ChoiceOutcome.record);
+      expect(c.type, 'in');
+    });
+
+    test('pilih masuk padahal sudah masuk = ditanya, usul pulang', () {
+      final c = checkChosen(emp(open: pagi, todayIn: pagi), const [], sore, s, 'in');
+      expect(c.outcome, ChoiceOutcome.alreadyIn);
+      expect(c.type, 'out');
+      expect(c.since, pagi);
+    });
+
+    test('pilih pulang padahal belum masuk = ditanya', () {
+      expect(checkChosen(emp(), const [], sore, s, 'out').outcome, ChoiceOutcome.notIn);
+    });
+
+    test('pilih pulang setelah masuk = dicatat pulang', () {
+      final c = checkChosen(emp(), [LocalEvent('in', pagi)], sore, s, 'out');
+      expect(c.outcome, ChoiceOutcome.record);
+      expect(c.since, pagi);
+    });
+
+    test('lupa pulang kemarin, pilih masuk pagi ini = dicatat masuk tanpa ditanya', () {
+      final c = checkChosen(emp(open: DateTime(2026, 11, 25, 20, 0)), const [], pagi, s, 'in');
+      expect(c.outcome, ChoiceOutcome.record);
+      expect(c.type, 'in');
+    });
+
+    test('pindai ganda dalam 1 menit diabaikan', () {
+      final c = checkChosen(emp(), [LocalEvent('in', pagi)], pagi.add(const Duration(seconds: 20)), s, 'out');
+      expect(c.outcome, ChoiceOutcome.ignored);
+    });
+
+    test('pilihan bawaan mengikuti titik tengah jadwal', () {
+      final list = [emp(schedule: const Schedule('08:00', '17:00', 10))];
+      expect(defaultChoice(list, DateTime(2026, 11, 26, 12, 29)), 'in');
+      expect(defaultChoice(list, DateTime(2026, 11, 26, 12, 30)), 'out');
+      expect(defaultChoice(const [], DateTime(2026, 11, 26, 11, 0)), 'in');
+      expect(defaultChoice(const [], DateTime(2026, 11, 26, 13, 0)), 'out');
+    });
+  });
 }
