@@ -10,6 +10,7 @@ import '../../core/widgets/company_logo.dart';
 import '../../core/widgets/ui.dart';
 import '../absen/attendance_models.dart';
 import '../absen/attendance_repository.dart';
+import '../absen/remote_clock.dart';
 import '../aset/aset_page.dart';
 import '../jadwal/jadwal_page.dart';
 import '../notifikasi/notifikasi_page.dart';
@@ -45,6 +46,7 @@ class BerandaPage extends ConsumerWidget {
           ref.invalidate(unreadNotificationCountProvider);
           ref.invalidate(scheduleWeekProvider);
           ref.invalidate(myAssetsProvider);
+          ref.invalidate(remoteAttendanceProvider);
           await ref.read(attendanceStatusProvider.future).then((_) {}, onError: (_) {});
         },
         child: ListView(
@@ -117,15 +119,20 @@ class BerandaPage extends ConsumerWidget {
   }
 }
 
-class _TodayCard extends StatelessWidget {
+class _TodayCard extends ConsumerWidget {
   const _TodayCard({required this.data, required this.now});
   final AttendanceStatusDto? data;
   final DateTime now;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final day = data?.attendance;
-    final clockIn = day?.clockIn ?? data?.clockInAt;
+    // Hari WFH / dinas luar: absen dengan selfie dari HP (aturan sama dengan web).
+    final remote = ref.watch(remoteAttendanceProvider).asData?.value;
+    final remoteAllowed = remote?['allowed'] == true;
+    final next = remote?['next'] as String?;
+    final clockIn = remoteAllowed ? Fmt.parse(remote!['clock_in'] as String?) : (day?.clockIn ?? data?.clockInAt);
+    final clockOut = remoteAllowed ? Fmt.parse(remote!['clock_out'] as String?) : day?.clockOut;
     final (String, PillTone)? state = switch (day?.status) {
       _ when clockIn == null => null,
       'late' => ('Terlambat ${day!.lateMinutes} mnt', PillTone.accent),
@@ -146,20 +153,47 @@ class _TodayCard extends StatelessWidget {
           Expanded(child: _time('Masuk', clockIn)),
           Container(width: 1, height: 44, color: Colors.white12),
           const SizedBox(width: 16),
-          Expanded(child: _time('Pulang', day?.clockOut)),
+          Expanded(child: _time('Pulang', clockOut)),
         ]),
         const SizedBox(height: 14),
         Wrap(spacing: 6, runSpacing: 6, children: [
           StatusPill(label: shift, tone: PillTone.onPrimary, icon: Icons.schedule),
+          if (remoteAllowed) StatusPill(label: remote!['status_label'] as String? ?? 'WFH', tone: PillTone.accent, icon: Icons.home_work_outlined),
           if (state != null) StatusPill(label: state.$1, tone: state.$2),
         ]),
         const SizedBox(height: 12),
-        Text(
-          clockIn == null
-              ? 'Absen masuk dan pulang dilakukan di tablet kantor atau mesin absen.'
-              : 'Tercatat dari tablet kantor atau mesin absen. Absen pulang juga di sana.',
-          style: const TextStyle(fontSize: 12, color: Color(0x99FFFFFF), height: 1.4),
-        ),
+        if (remoteAllowed) ...[
+          Text(
+            next == 'done'
+                ? 'Absen hari ini sudah lengkap. Terima kasih!'
+                : 'Hari ini kamu bekerja dari luar kantor. Absen dengan selfie dari HP; titik lokasimu ikut dicatat.',
+            style: const TextStyle(fontSize: 12, color: Color(0xCCFFFFFF), height: 1.4),
+          ),
+          if (next == 'in' || next == 'out') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.navy,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 15, fontWeight: FontWeight.w800),
+                ),
+                onPressed: () => startRemoteClock(context, ref, next!),
+                icon: const Icon(Icons.photo_camera_front_outlined, size: 20),
+                label: Text(next == 'in' ? 'Absen masuk dengan selfie' : 'Absen pulang dengan selfie'),
+              ),
+            ),
+          ],
+        ] else
+          Text(
+            clockIn == null
+                ? 'Absen masuk dan pulang dilakukan di tablet kantor atau mesin absen.'
+                : 'Tercatat dari tablet kantor atau mesin absen. Absen pulang juga di sana.',
+            style: const TextStyle(fontSize: 12, color: Color(0x99FFFFFF), height: 1.4),
+          ),
       ]),
     );
   }

@@ -103,7 +103,7 @@ class ProfilPage extends ConsumerWidget {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Absen masuk dan pulang dilakukan di tablet kantor atau mesin gudang. Aplikasi ini bisa dipakai dari HP mana saja.',
+                    'Absen masuk dan pulang dilakukan di tablet kantor atau mesin gudang. Saat WFH atau dinas luar, absen dengan selfie dari Beranda.',
                     style: TextStyle(fontSize: 12.5, color: AppColors.chipText, height: 1.45),
                   ),
                 ),

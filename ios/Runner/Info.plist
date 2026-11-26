@@ -3,7 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Kamera dipakai untuk mengambil foto profil dan foto bukti pengajuan.</string>
+	<string>Kamera dipakai untuk foto profil, foto bukti pengajuan, dan selfie absen saat WFH.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Titik lokasi dicatat saat kamu absen selfie di hari WFH atau dinas luar.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Galeri dipakai untuk melampirkan bukti pada pengajuan koreksi absensi.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
