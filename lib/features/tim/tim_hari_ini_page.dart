@@ -177,10 +177,11 @@ class _TimHariIniPageState extends ConsumerState<TimHariIniPage> {
           child: Builder(builder: (context) {
             final members = asList(d?['members']).where(_matches).toList();
             int count(String s) => members.where((m) => m['state'] == s).length;
-            return ListView(
+            // Row (bukan ListView) agar semua chip selalu terbangun; jumlahnya sedikit.
+            return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 _Chip(label: 'Semua${d == null ? '' : ' ${members.length}'}', selected: _state == null, onTap: () => setState(() => _state = null)),
                 for (final (k, _) in _states)
                   _Chip(
@@ -196,7 +197,7 @@ class _TimHariIniPageState extends ConsumerState<TimHariIniPage> {
                   selected: _direct,
                   onTap: () => setState(() => _direct = !_direct),
                 ),
-              ],
+              ]),
             );
           }),
         ),

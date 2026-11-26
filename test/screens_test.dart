@@ -102,10 +102,14 @@ void main() {
   testWidgets('tim hari ini bisa dicari dan disaring status', (tester) async {
     await _pump(tester, leader: true, path: '/tim/hari-ini', width: 320);
     expect(find.text('Budi Santoso'), findsOneWidget);
+    await tester.ensureVisible(find.textContaining('Telat 1'));
+    await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Telat 1'));
     await tester.pumpAndSettle();
     expect(find.text('Dewi Wulandari'), findsOneWidget);
     expect(find.text('Budi Santoso'), findsNothing);
+    await tester.ensureVisible(find.textContaining('Semua'));
+    await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Semua'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'yoga');
