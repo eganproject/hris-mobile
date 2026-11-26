@@ -41,6 +41,19 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Pasang konfigurasi Firebase (notifikasi push)
+        # Isi secret GOOGLE_SERVICES_JSON = isi file google-services.json dari
+        # Firebase. Kalau kosong, APK tetap dibuat tanpa notifikasi push.
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            echo "google-services.json terpasang."
+          else
+            echo "::warning::Secret GOOGLE_SERVICES_JSON belum diisi: APK dibuat tanpa notifikasi push."
+          fi
+
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test

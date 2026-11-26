@@ -6,11 +6,13 @@ import 'package:material_ui/material_ui.dart';
 import 'app.dart';
 import 'core/api/api_client.dart';
 import 'core/auth/auth_controller.dart';
+import 'core/push/push_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID');
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await PushService.init();
 
   runApp(ProviderScope(
     overrides: [
