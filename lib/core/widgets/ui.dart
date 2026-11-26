@@ -129,9 +129,10 @@ class NavyHeroCard extends StatelessWidget {
 
 /// Kartu putih bergaris tipis dengan bayangan lembut.
 class AppCard extends StatelessWidget {
-  const AppCard({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.radius = 16, this.onTap});
+  const AppCard({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.radius = 16, this.onTap, this.color = Colors.white});
 
   final Widget child;
+  final Color color;
   final EdgeInsetsGeometry padding;
   final double radius;
   final VoidCallback? onTap;
@@ -147,14 +148,16 @@ class AppCard extends StatelessWidget {
     final box = DecoratedBox(
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(radius), boxShadow: AppColors.cardShadow),
       child: Material(
-        color: Colors.white,
+        color: color,
         shape: shape,
         clipBehavior: Clip.antiAlias,
-        child: Padding(padding: padding, child: child),
+        // InkWell memberi efek sentuh, supaya ketukan terasa langsung ditanggapi.
+        child: onTap == null
+            ? Padding(padding: padding, child: child)
+            : InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
       ),
     );
-    if (onTap == null) return box;
-    return GestureDetector(onTap: onTap, behavior: HitTestBehavior.opaque, child: box);
+    return box;
   }
 }
 

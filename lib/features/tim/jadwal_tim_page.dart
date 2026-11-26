@@ -211,12 +211,12 @@ class _JadwalTimPageState extends ConsumerState<JadwalTimPage> {
                   child: OutlinedButton.icon(
                     onPressed: _busy || g == null ? null : () => _run((api) => api.post('team/schedule/copy-last-week', data: {'week_start': ymd(_weekStart)})),
                     icon: const Icon(Icons.copy_all_outlined, size: 18),
-                    label: const FittedBox(child: Text('Salin minggu lalu')),
+                    label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Salin minggu lalu')),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(52),
                       shape: const StadiumBorder(),
                       foregroundColor: T2Colors.navy,
-                      textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                      textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -288,7 +288,7 @@ class _DayButton extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 64),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Text(dayShort(date), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: fg.withValues(alpha: .8))),
-              FittedBox(child: Text('${date.day}', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: fg))),
+              FittedBox(fit: BoxFit.scaleDown, child: Text('${date.day}', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: fg))),
               const SizedBox(height: 3),
               Container(
                 width: 6,
