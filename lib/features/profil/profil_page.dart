@@ -65,6 +65,12 @@ class ProfilPage extends ConsumerWidget {
                   onTap: () => context.push('/profil/data-diri'),
                 ),
                 _MenuRow(
+                  icon: Icons.inventory_2_outlined,
+                  title: 'Aset saya',
+                  subtitle: 'Barang kantor yang sedang kamu pegang',
+                  onTap: () => context.push('/aset'),
+                ),
+                _MenuRow(
                   icon: Icons.account_tree_outlined,
                   title: 'Struktur organisasi',
                   subtitle: [e.department, e.managerName == null ? null : 'Atasan: ${e.managerName}'].whereType<String>().join(' · '),
@@ -263,7 +269,7 @@ class _ProfilePhotoState extends ConsumerState<_ProfilePhoto> {
               height: 64,
               child: CircleAvatar(
                 backgroundColor: AppColors.accent,
-                foregroundImage: photo != null ? NetworkImage(photo) : null,
+                foregroundImage: photo != null ? NetworkImage(absoluteUrl(photo)!) : null,
                 onForegroundImageError: photo != null ? (_, _) {} : null,
                 child: Text(widget.initials,
                     style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: AppColors.navy)),

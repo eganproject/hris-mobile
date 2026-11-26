@@ -70,76 +70,107 @@ class _TimPageState extends ConsumerState<TimPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: NavyHeroCard(
                 onTap: () => context.push('/tim/hari-ini'),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Hari ini · ${dateLabel(ymd(now), year: false)}',
-                      style: const TextStyle(fontSize: 12.5, color: Color(0xB3FFFFFF), fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 6),
-                  Text.rich(
-                    TextSpan(children: [
-                      TextSpan(text: t == null ? '–' : '$present', style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hari ini · ${dateLabel(ymd(now), year: false)}',
+                      style: const TextStyle(fontSize: 12.5, color: Color(0xB3FFFFFF), fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 6),
+                    Text.rich(
                       TextSpan(
-                        text: teamSize == null ? '' : ' dari $teamSize hadir',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xCCFFFFFF)),
+                        children: [
+                          TextSpan(
+                            text: t == null ? '–' : '$present',
+                            style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800),
+                          ),
+                          TextSpan(
+                            text: teamSize == null ? '' : ' dari $teamSize hadir',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xCCFFFFFF)),
+                          ),
+                        ],
                       ),
-                    ]),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(spacing: 6, runSpacing: 6, children: [
-                    StatusPill(label: '${c('not_yet')} belum absen', tone: c('not_yet') > 0 ? PillTone.accent : PillTone.onPrimary),
-                    StatusPill(label: '${c('leave')} cuti', tone: PillTone.onPrimary),
-                    StatusPill(label: '${c('late')} terlambat', tone: PillTone.onPrimary),
-                  ]),
-                ]),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        StatusPill(label: '${c('not_yet')} belum absen', tone: c('not_yet') > 0 ? PillTone.accent : PillTone.onPrimary),
+                        StatusPill(label: '${c('leave')} cuti', tone: PillTone.onPrimary),
+                        StatusPill(label: '${c('late')} terlambat', tone: PillTone.onPrimary),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 14),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(children: [
-                _Tile(Icons.fact_check_outlined, 'Persetujuan', '/tim/persetujuan', badge: pendingTotal),
-                const SizedBox(width: 10),
-                const _Tile(Icons.calendar_view_week_outlined, 'Atur jadwal', '/tim/jadwal'),
-                const SizedBox(width: 10),
-                const _Tile(Icons.account_tree_outlined, 'Struktur', '/struktur'),
-              ]),
+              child: Row(
+                children: [
+                  _Tile(Icons.fact_check_outlined, 'Persetujuan', '/tim/persetujuan', badge: pendingTotal),
+                  const SizedBox(width: 10),
+                  const _Tile(Icons.calendar_view_week_outlined, 'Atur jadwal', '/tim/jadwal'),
+                  const SizedBox(width: 10),
+                  const _Tile(Icons.account_tree_outlined, 'Struktur', '/struktur'),
+                ],
+              ),
             ),
             const SizedBox(height: 22),
-            SectionLabel('Menunggu persetujuan',
-                action: pendingTotal > 0 ? 'Semua ($pendingTotal)' : null, onAction: () => context.push('/tim/persetujuan')),
+            SectionLabel(
+              'Menunggu persetujuan',
+              action: pendingTotal > 0 ? 'Semua ($pendingTotal)' : null,
+              onAction: () => context.push('/tim/persetujuan'),
+            ),
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: approvals.when(
                 skipLoadingOnRefresh: true,
-                loading: () => const AppCard(child: SizedBox(height: 60, child: Center(child: CircularProgressIndicator()))),
-                error: (e, _) => AppCard(child: Text(t2Error(e), style: const TextStyle(color: AppColors.muted))),
+                loading: () => const AppCard(
+                  child: SizedBox(height: 60, child: Center(child: CircularProgressIndicator())),
+                ),
+                error: (e, _) => AppCard(
+                  child: Text(t2Error(e), style: const TextStyle(color: AppColors.muted)),
+                ),
                 data: (_) => pendingItems.isEmpty
                     ? const AppCard(
-                        child: Row(children: [
-                          Icon(Icons.task_alt, color: AppColors.success),
-                          SizedBox(width: 10),
-                          Expanded(child: Text('Tidak ada pengajuan yang menunggu.', style: TextStyle(color: AppColors.muted))),
-                        ]),
-                      )
-                    : Column(children: [
-                        ApprovalCard(
-                          item: pendingItems.first,
-                          busy: _busy.contains('${pendingItems.first['kind']}-${pendingItems.first['id']}'),
-                          onApprove: () => _decide(pendingItems.first, true),
-                          onReject: () => _decide(pendingItems.first, false),
+                        child: Row(
+                          children: [
+                            Icon(Icons.task_alt, color: AppColors.success),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text('Tidak ada pengajuan yang menunggu.', style: TextStyle(color: AppColors.muted)),
+                            ),
+                          ],
                         ),
-                        if (pendingItems.length > 1) ...[
-                          const SizedBox(height: 8),
-                          AppCard(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Column(children: [
-                              for (final (i, item) in pendingItems.skip(1).take(3).indexed)
-                                _PendingRow(item: item, last: i == (pendingItems.length - 1).clamp(0, 3) - 1),
-                            ]),
+                      )
+                    : Column(
+                        children: [
+                          ApprovalCard(
+                            item: pendingItems.first,
+                            busy: _busy.contains('${pendingItems.first['kind']}-${pendingItems.first['id']}'),
+                            onApprove: () => _decide(pendingItems.first, true),
+                            onReject: () => _decide(pendingItems.first, false),
                           ),
+                          if (pendingItems.length > 1) ...[
+                            const SizedBox(height: 8),
+                            AppCard(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Column(
+                                children: [
+                                  for (final (i, item) in pendingItems.skip(1).take(3).indexed)
+                                    _PendingRow(item: item, last: i == (pendingItems.length - 1).clamp(0, 3) - 1),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
-                      ]),
+                      ),
               ),
             ),
             const SizedBox(height: 22),
@@ -153,9 +184,9 @@ class _TimPageState extends ConsumerState<TimPage> {
                     )
                   : AppCard(
                       padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Column(children: [
-                        for (final (i, m) in members.take(5).indexed) _MemberRow(row: m, last: i == members.take(5).length - 1),
-                      ]),
+                      child: Column(
+                        children: [for (final (i, m) in members.take(5).indexed) _MemberRow(row: m, last: i == members.take(5).length - 1)],
+                      ),
                     ),
             ),
           ],
@@ -174,12 +205,15 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: AppCard(
-          padding: const EdgeInsets.fromLTRB(8, 14, 8, 12),
-          radius: 14,
-          onTap: () => context.push(route),
-          child: Column(children: [
-            Stack(clipBehavior: Clip.none, children: [
+    child: AppCard(
+      padding: const EdgeInsets.fromLTRB(8, 14, 8, 12),
+      radius: 14,
+      onTap: () => context.push(route),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
               Container(
                 width: 40,
                 height: 40,
@@ -197,15 +231,20 @@ class _Tile extends StatelessWidget {
                       borderRadius: BorderRadius.circular(99),
                       border: Border.all(color: Colors.white, width: 1.5),
                     ),
-                    child: Text('$badge', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.navy)),
+                    child: Text(
+                      '$badge',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.navy),
+                    ),
                   ),
                 ),
-            ]),
-            const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-          ]),
-        ),
-      );
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    ),
+  );
 }
 
 class _PendingRow extends StatelessWidget {
@@ -224,23 +263,32 @@ class _PendingRow extends StatelessWidget {
       onTap: () => context.push('/tim/persetujuan'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(border: last ? null : const Border(bottom: BorderSide(color: AppColors.line))),
-        child: Row(children: [
-          PersonAvatar(person: emp, size: 34),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(emp['name'] as String? ?? '-', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
-              Text(when, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-            ]),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-            decoration: BoxDecoration(color: style.bg, borderRadius: BorderRadius.circular(99)),
-            child: Text(approvalCategoryLabel(item['category'] as String?),
-                style: TextStyle(color: style.fg, fontWeight: FontWeight.w600, fontSize: 11.5)),
-          ),
-        ]),
+        decoration: BoxDecoration(
+          border: last ? null : const Border(bottom: BorderSide(color: AppColors.line)),
+        ),
+        child: Row(
+          children: [
+            PersonAvatar(person: emp, size: 34),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(emp['name'] as String? ?? '-', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                  Text(when, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+              decoration: BoxDecoration(color: style.bg, borderRadius: BorderRadius.circular(99)),
+              child: Text(
+                approvalCategoryLabel(item['category'] as String?),
+                style: TextStyle(color: style.fg, fontWeight: FontWeight.w600, fontSize: 11.5),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -265,20 +313,32 @@ class _MemberRow extends StatelessWidget {
       'not_yet' => ('Belum absen', 'danger'),
       _ => ('Libur', 'neutral'),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(border: last ? null : const Border(bottom: BorderSide(color: AppColors.line))),
-      child: Row(children: [
-        PersonAvatar(person: emp, size: 36),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(emp['name'] as String? ?? '-', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-            Text(emp['job_title'] as String? ?? '', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-          ]),
+    return InkWell(
+      onTap: emp['id'] == null ? null : () => context.push('/tim/anggota/${emp['id']}'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          border: last ? null : const Border(bottom: BorderSide(color: AppColors.line)),
         ),
-        StatusChip(label.trim(), tone: tone),
-      ]),
+        child: Row(
+          children: [
+            PersonAvatar(person: emp, size: 36),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(emp['name'] as String? ?? '-', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                  Text(emp['job_title'] as String? ?? '', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                ],
+              ),
+            ),
+            StatusChip(label.trim(), tone: tone),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right, size: 20, color: AppColors.faint),
+          ],
+        ),
+      ),
     );
   }
 }

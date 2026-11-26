@@ -3,8 +3,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
+import '../t2_common/search_select.dart';
 import '../t2_common/t2_ui.dart';
 import 'pengajuan_providers.dart';
 
@@ -85,27 +87,29 @@ class _SwapFormPageState extends ConsumerState<SwapFormPage> {
               const BackHeader(title: 'Tukar jadwal', subtitle: 'Disetujui rekan, lalu HR'),
               Expanded(
                 child: ListView(padding: const EdgeInsets.fromLTRB(20, 18, 20, 20), children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: _type,
-                    decoration: t2Input('Jenis'),
-                    items: [for (final e in types.entries) DropdownMenuItem(value: e.key, child: Text(e.value.toString()))],
-                    onChanged: (v) => setState(() => _type = v ?? 'swap'),
+                  SearchSelectField<String>(
+                    label: 'Jenis',
+                    value: _type,
+                    options: [for (final e in types.entries) SelectOption(e.key, e.value.toString())],
+                    onChanged: (v) => setState(() => _type = v),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    initialValue: _partnerId,
-                    isExpanded: true,
-                    decoration: t2Input('Rekan'),
-                    items: [
+                  SearchSelectField<int>(
+                    label: 'Rekan',
+                    sheetTitle: 'Pilih rekan',
+                    searchHint: 'Cari nama rekan…',
+                    value: _partnerId,
+                    options: [
                       for (final p in people)
-                        DropdownMenuItem(value: p['id'] as int, child: Text('${p['name']}${p['job_title'] != null ? ' · ${p['job_title']}' : ''}', overflow: TextOverflow.ellipsis)),
+                        SelectOption(p['id'] as int, p['name'] as String? ?? '-', subtitle: p['job_title'] as String?, person: p),
                     ],
                     onChanged: (v) => setState(() => _partnerId = v),
                   ),
                   const SizedBox(height: 12),
                   ListTile(
-                    tileColor: T2Colors.bg,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    tileColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.inputLine)),
+                    trailing: const Icon(Icons.expand_more_rounded, color: AppColors.faint),
                     leading: const Icon(Icons.event, color: T2Colors.orangeText),
                     title: const Text('Tanggal saya', style: TextStyle(fontSize: 12, color: T2Colors.muted)),
                     subtitle: Text(dateLabel(ymd(_myDate)), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: T2Colors.ink)),
@@ -117,8 +121,9 @@ class _SwapFormPageState extends ConsumerState<SwapFormPage> {
                   if (_type != 'cover') ...[
                     const SizedBox(height: 10),
                     ListTile(
-                      tileColor: T2Colors.bg,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      tileColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.inputLine)),
+                      trailing: const Icon(Icons.expand_more_rounded, color: AppColors.faint),
                       leading: const Icon(Icons.event_available, color: T2Colors.orangeText),
                       title: const Text('Tanggal rekan', style: TextStyle(fontSize: 12, color: T2Colors.muted)),
                       subtitle: Text(_partnerDate == null ? 'Pilih tanggal' : dateLabel(ymd(_partnerDate!)),

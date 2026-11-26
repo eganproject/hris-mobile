@@ -10,6 +10,7 @@ import '../../core/widgets/company_logo.dart';
 import '../../core/widgets/ui.dart';
 import '../absen/attendance_models.dart';
 import '../absen/attendance_repository.dart';
+import '../aset/aset_page.dart';
 import '../jadwal/jadwal_page.dart';
 import '../notifikasi/notifikasi_page.dart';
 import '../pengajuan/pengajuan_providers.dart';
@@ -43,6 +44,7 @@ class BerandaPage extends ConsumerWidget {
           ref.invalidate(announcementListProvider);
           ref.invalidate(unreadNotificationCountProvider);
           ref.invalidate(scheduleWeekProvider);
+          ref.invalidate(myAssetsProvider);
           await ref.read(attendanceStatusProvider.future).then((_) {}, onError: (_) {});
         },
         child: ListView(
@@ -77,6 +79,7 @@ class BerandaPage extends ConsumerWidget {
               AppCard(child: Text(apiErrorMessage(status.error!), style: const TextStyle(color: AppColors.danger)))
             else
               _TodayCard(data: status.value, now: now),
+            const _AssetBanner(),
             const SizedBox(height: 22),
             const Text('Ajukan', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
@@ -277,6 +280,42 @@ class _LatestAnnouncement extends ConsumerWidget {
       data: (items) => items.isEmpty
           ? const AppCard(child: Text('Belum ada pengumuman.', style: TextStyle(color: AppColors.muted)))
           : AnnouncementCard(item: items.first, onReturn: () => ref.invalidate(announcementListProvider)),
+    );
+  }
+}
+
+/// Muncul hanya bila ada aset yang diserahkan tapi belum dikonfirmasi.
+class _AssetBanner extends ConsumerWidget {
+  const _AssetBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(myAssetsProvider).asData?.value;
+    final counts = data?['counts'];
+    final n = counts is Map ? (counts['unacknowledged'] as num?)?.toInt() ?? 0 : 0;
+    if (n == 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: AppCard(
+        onTap: () => context.push('/aset'),
+        color: AppColors.accentSoft,
+        child: Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(11)),
+            child: const Icon(Icons.inventory_2_outlined, color: AppColors.navy, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('$n aset menunggu konfirmasimu', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              const Text('Cek barangnya lalu konfirmasi terima', style: TextStyle(fontSize: 12.5, color: AppColors.muted)),
+            ]),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.accentText),
+        ]),
+      ),
     );
   }
 }

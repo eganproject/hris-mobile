@@ -39,6 +39,75 @@ void main() {
     }
   }
 
+  // Layar baru, termasuk di HP sempit (320) dan tablet (820).
+  for (final width in [320.0, 390.0, 820.0]) {
+    for (final (path, leader) in [
+      ('/aset', false),
+      ('/notifikasi', false),
+      ('/jadwal', false),
+      ('/pengajuan/tukar', false),
+      ('/pengajuan/cuti?kategori=cuti', false),
+      ('/tim/anggota/4', true),
+      ('/tim/hari-ini', true),
+      ('/tim/persetujuan', true),
+      ('/pengajuan/lembur', false),
+      ('/pengajuan/cuti?kategori=sakit', false),
+      ('/pengajuan/semua', false),
+      ('/koreksi', false),
+      ('/struktur', false),
+      ('/profil/data-diri', false),
+      ('/rekan', true),
+    ]) {
+      testWidgets('$path tampil di lebar ${width.toInt()}', (tester) async {
+        final old = FlutterError.onError;
+        FlutterError.onError = (d) {
+          if (Platform.environment['DEBUG_OVERFLOW'] != null) FlutterError.dumpErrorToConsole(d, forceReport: true);
+          old?.call(d);
+        };
+        addTearDown(() => FlutterError.onError = old);
+        await _pump(tester, leader: leader, path: path, width: width);
+        expect(tester.takeException(), isNull);
+        if (shots != null && width == 390) {
+          final name = 'baru_${path.substring(1).replaceAll(RegExp(r'[/?=]'), '_')}.png';
+          await expectLater(find.byType(MaterialApp), matchesGoldenFile(Uri.file('$shots/$name')));
+        }
+      });
+    }
+  }
+
+  testWidgets('notifikasi aset bisa diketuk dan dikonfirmasi', (tester) async {
+    await _pump(tester, leader: false, path: '/notifikasi');
+    await tester.tap(find.text('Aset diserahkan kepada Anda'));
+    await tester.pumpAndSettle();
+    expect(find.text('Konfirmasi terima'), findsOneWidget);
+    expect(find.text('Lihat aset saya'), findsOneWidget);
+    if (shots != null) await expectLater(find.byType(MaterialApp), matchesGoldenFile(Uri.file('$shots/baru_notifikasi_detail.png')));
+  });
+
+  testWidgets('jenis cuti bisa diketik untuk dicari', (tester) async {
+    await _pump(tester, leader: false, path: '/pengajuan/cuti?kategori=cuti');
+    await tester.tap(find.text('Jenis'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'duka');
+    await tester.pumpAndSettle();
+    expect(find.text('Cuti duka'), findsOneWidget);
+    expect(find.text('Cuti menikah'), findsNothing);
+    if (shots != null) await expectLater(find.byType(MaterialApp), matchesGoldenFile(Uri.file('$shots/baru_pilih_cari.png')));
+    await tester.tap(find.text('Cuti duka'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cuti duka'), findsOneWidget);
+  });
+
+  testWidgets('pilihan rekan bisa dicari', (tester) async {
+    await _pump(tester, leader: false, path: '/pengajuan/tukar');
+    await tester.tap(find.text('Rekan'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pilih rekan'), findsOneWidget);
+    await tester.tap(find.text('Dewi Wulandari'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Dewi Wulandari'), findsOneWidget);
+  });
+
   testWidgets('layar masuk tampil', (tester) async {
     await _pump(tester, leader: false, path: '/login', signedIn: false);
     expect(find.text('Masuk'), findsOneWidget);
@@ -46,8 +115,8 @@ void main() {
   });
 }
 
-Future<void> _pump(WidgetTester tester, {required bool leader, required String path, bool signedIn = true}) async {
-  tester.view.physicalSize = const Size(390 * 2, 844 * 2);
+Future<void> _pump(WidgetTester tester, {required bool leader, required String path, bool signedIn = true, double width = 390}) async {
+  tester.view.physicalSize = Size(width * 2, (width > 600 ? 1180 : 844) * 2);
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
 
@@ -72,7 +141,13 @@ Future<void> _pump(WidgetTester tester, {required bool leader, required String p
   ));
   await tester.pumpAndSettle();
   if (path != '/' && path != '/login') {
-    container.read(routerProvider).go(path);
+    // Layar penuh (bukan tab) dibuka di atas Beranda, seperti di aplikasi.
+    final isTab = ['/kehadiran', '/pengajuan', '/info', '/tim', '/profil'].any((t) => path == t || path.startsWith('$t?'));
+    if (isTab) {
+      container.read(routerProvider).go(path);
+    } else {
+      container.read(routerProvider).push(path);
+    }
     await tester.pumpAndSettle();
   }
 }
@@ -115,6 +190,30 @@ Map<String, dynamic> _person(int id, String name, String job, {bool online = fal
       'photo_url': null,
       'online': online,
       'last_seen_at': DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
+    };
+
+Map<String, dynamic> _asset(int id, String state) => {
+      'id': id,
+      'state': state,
+      'asset': {
+        'id': id,
+        'code': 'LPT-00$id$id',
+        'name': ['Laptop Lenovo ThinkPad E14', 'Monitor Dell 24 inci', 'Kartu akses gedung', 'HP Samsung A15'][id - 1],
+        'brand': 'Lenovo',
+        'model': 'E14 Gen 5',
+        'serial_number': 'SN-88231$id',
+        'category': 'Elektronik',
+      },
+      'assigned_at': '${_d(-30 * id)}T09:00:00+07:00',
+      'assigned_by': 'Tim IT',
+      'expected_return_at': state == 'overdue' ? _d(-3) : null,
+      'condition_out': 'Baik',
+      'purpose': 'Kerja harian',
+      'notes': null,
+      'acknowledged_at': state == 'unacknowledged' ? null : '${_d(-29 * id)}T10:00:00+07:00',
+      'acknowledgement_note': null,
+      'returned_at': state == 'returned' ? '${_d(-10)}T16:00:00+07:00' : null,
+      'condition_in': state == 'returned' ? 'Baik' : null,
     };
 
 Object? _response(String path, Map<String, dynamic> q, bool leader) {
@@ -162,24 +261,86 @@ Object? _response(String path, Map<String, dynamic> q, bool leader) {
       };
     case '/schedule':
       final from = DateTime.parse(q['from'] as String);
+      final to = q['to'] == null ? from.add(const Duration(days: 6)) : DateTime.parse(q['to'] as String);
       return {
         'data': {
           'days': [
-            for (var i = 0; i < 7; i++)
+            for (var i = 0; i <= to.difference(from).inDays; i++)
               () {
                 final d = from.add(Duration(days: i));
                 final date = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
                 final off = d.weekday >= 6;
+                final mode = off ? 'off' : d.day % 9 == 0 ? 'leave' : d.day % 5 == 0 ? 'wfh' : 'office';
                 return {
                   'date': date,
-                  'mode': off ? 'off' : 'office',
-                  'label': off ? 'Libur' : 'Shift Pagi',
-                  'shift': off ? null : {'start_time': '08:00', 'end_time': '17:00'},
+                  'mode': mode,
+                  'label': off ? 'Libur' : mode == 'leave' ? 'Cuti' : mode == 'wfh' ? 'WFH' : 'Shift Pagi',
+                  'is_holiday': false,
+                  'shift': mode == 'office' || mode == 'wfh'
+                      ? {'code': d.day.isEven ? 'P' : 'S', 'start_time': '08:00', 'end_time': '17:00'}
+                      : null,
                   'location': off ? null : 'Kantor Pusat',
+                  'leave': mode == 'leave' ? {'id': 1, 'name': 'Cuti tahunan'} : null,
                 };
               }(),
           ],
-          'pending_confirmations': <Object>[],
+          'pending_confirmations': [
+            {'week_start': _d(7 - DateTime.now().weekday + 1), 'week_end': _d(7 - DateTime.now().weekday + 7)},
+          ],
+        },
+      };
+    case '/assets':
+      return {
+        'data': {
+          'open': [_asset(1, 'unacknowledged'), _asset(2, 'held'), _asset(3, 'overdue')],
+          'history': [_asset(4, 'returned')],
+          'counts': {'open': 3, 'unacknowledged': 1, 'overdue': 1},
+        },
+      };
+    case '/assets/1':
+      return {'data': _asset(1, 'unacknowledged')};
+    case '/notifications':
+      return {
+        'data': [
+          {'id': 'a', 'category': 'asset', 'title': 'Aset diserahkan kepada Anda', 'message': 'Laptop Lenovo ThinkPad E14 (LPT-0012) diserahkan oleh Tim IT. Mohon konfirmasi penerimaannya.', 'created_at': DateTime.now().toIso8601String(), 'read': false, 'meta': {'assignment_id': 1}},
+          {'id': 'b', 'category': 'leave', 'title': 'Cuti disetujui', 'message': 'Cuti tahunan 2 hari Anda disetujui.', 'created_at': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(), 'read': true, 'meta': <String, dynamic>{}},
+          {'id': 'c', 'category': 'schedule', 'title': 'Jadwal minggu depan terbit', 'message': 'Cek dan konfirmasi jadwalmu.', 'created_at': DateTime.now().subtract(const Duration(days: 3)).toIso8601String(), 'read': true, 'meta': <String, dynamic>{}},
+        ],
+      };
+    case '/leave-types':
+      return {
+        'data': [
+          for (final (i, n) in ['Cuti tahunan', 'Cuti menikah', 'Cuti melahirkan', 'Cuti duka', 'Cuti besar', 'Cuti haji', 'Cuti khitan anak'].indexed)
+            {'id': i + 1, 'name': n, 'category': 'cuti', 'remaining': i == 0 ? 9 : null, 'requires_attachment': false},
+          {'id': 20, 'name': 'Izin pribadi', 'category': 'izin'},
+          {'id': 30, 'name': 'Sakit dengan surat dokter', 'category': 'sakit', 'requires_attachment': true},
+        ],
+      };
+    case '/swaps/colleagues':
+      return {
+        'data': [_person(2, 'Budi Santoso', 'Kasir'), _person(3, 'Dewi Wulandari', 'Staf Pajak')],
+        'meta': {'types': {'swap': 'Tukar shift', 'cover': 'Gantikan shift'}},
+      };
+    case '/team/members/4':
+      return {
+        'data': {
+          'person': {..._person(4, 'Yoga Hidayat', 'Staf Penagihan'), 'branch': 'Kantor Pusat', 'joined': '2022-03', 'manager': _person(5, 'Hendra Wijaya', 'Manajer Keuangan'), 'is_direct': true},
+          'month': q['month'],
+          'summary': {'present': 14, 'late': 2, 'leave': 1, 'absent': 0, 'late_minutes': 23},
+          'items': [
+            for (var i = 0; i < 8; i++)
+              {
+                'id': i,
+                'work_date': _d(-i),
+                'status': i == 2 ? 'late' : i == 5 ? 'leave' : 'present',
+                'status_label': i == 2 ? 'Terlambat' : i == 5 ? 'Cuti' : 'Hadir',
+                'shift': i == 5 ? null : 'Shift Pagi',
+                'clock_in': i == 5 ? null : '${_d(-i)}T07:5$i:00+07:00',
+                'clock_out': i == 5 || i == 0 ? null : '${_d(-i)}T17:0$i:00+07:00',
+                'late_minutes': i == 2 ? 12 : 0,
+                'note': null,
+              },
+          ],
         },
       };
     case '/pengajuan/ringkasan':
