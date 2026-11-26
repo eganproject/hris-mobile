@@ -22,6 +22,7 @@ dependencies:
   wakelock_plus: ^1.8.2
   device_info_plus: ^13.3.0
   intl: ^0.20.3
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:
@@ -33,3 +34,4 @@ flutter:
   assets:
     - assets/models/
     - assets/img/
+    - assets/sounds/

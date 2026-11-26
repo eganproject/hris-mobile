@@ -8,6 +8,7 @@ import '../../core/config.dart';
 import '../../core/models.dart';
 import '../../core/pin.dart';
 import '../../core/predict.dart';
+import '../../core/sounds.dart';
 import '../../core/tablet_controller.dart';
 import '../../face/camera_service.dart';
 import '../../face/face_engine.dart';
@@ -299,6 +300,7 @@ class _HomePageState extends State<HomePage> {
     );
 
     _showResult(_Result(employee: employee, type: type, at: at, method: method, since: since, record: record), seconds: resultSeconds);
+    unawaited(Sounds.instance.clocked(type));
   }
 
   void _showResult(_Result r, {required int seconds}) {
