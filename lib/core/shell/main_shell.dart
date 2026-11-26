@@ -4,7 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/app_colors.dart';
 
 /// Kerangka dengan menu bawah melayang (sesuai mockup):
-/// Beranda, Kabar, Riwayat, Pengajuan, Profil.
+/// Beranda, Riwayat, Pengajuan, Info (pengumuman HR), Profil.
 class MainShell extends StatelessWidget {
   const MainShell({super.key, required this.shell});
 
@@ -12,9 +12,9 @@ class MainShell extends StatelessWidget {
 
   static const _items = [
     (Icons.home_outlined, Icons.home_rounded, 'Beranda'),
-    (Icons.chat_bubble_outline, Icons.chat_bubble, 'Kabar'),
     (Icons.calendar_month_outlined, Icons.calendar_month, 'Riwayat'),
     (Icons.description_outlined, Icons.description, 'Pengajuan'),
+    (Icons.campaign_outlined, Icons.campaign, 'Info'),
     (Icons.person_outline, Icons.person, 'Profil'),
   ];
 

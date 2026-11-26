@@ -9,7 +9,7 @@ import '../t2_common/t2_ui.dart';
 import 'profil_providers.dart';
 
 /// Tab Profil: identitas, menu atasan (hanya bila punya bawahan), menu akun,
-/// HP absen terdaftar, dan keluar.
+/// dan keluar.
 class ProfilPage extends ConsumerWidget {
   const ProfilPage({super.key});
 
@@ -124,29 +124,6 @@ class ProfilPage extends ConsumerWidget {
                   ]),
                 ),
                 const SizedBox(height: 18),
-                const _GroupLabel('HP ABSEN'),
-                AppCard(
-                  child: Row(children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(14)),
-                      child: const Icon(Icons.smartphone, color: AppColors.primaryDark),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text('HP absen terdaftar', style: TextStyle(fontSize: 12.5, color: AppColors.muted)),
-                        Text(user.device?.model ?? 'HP ini', style: const TextStyle(fontWeight: FontWeight.w800)),
-                      ]),
-                    ),
-                  ]),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Ganti HP: cukup masuk dari HP baru, lalu tunggu persetujuan HR.',
-                  style: TextStyle(fontSize: 12.5, color: AppColors.muted),
-                ),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
                   onPressed: () async {
@@ -154,7 +131,7 @@ class ProfilPage extends ConsumerWidget {
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Keluar dari aplikasi?'),
-                        content: const Text('Absen yang masih antre (belum terkirim) tetap tersimpan di HP ini.'),
+                        content: const Text('Kamu bisa masuk lagi kapan saja, dari HP mana saja.'),
                         actions: [
                           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
                           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Keluar')),

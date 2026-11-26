@@ -20,7 +20,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _obscure = true;
   bool _loading = false;
   String? _error;
-  String? _pending;
 
   @override
   void dispose() {
@@ -37,12 +36,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     setState(() {
       _loading = true;
       _error = null;
-      _pending = null;
     });
     try {
       await ref.read(authControllerProvider.notifier).login(_login.text, _password.text);
-    } on DevicePendingException catch (e) {
-      setState(() => _pending = e.message);
     } catch (e) {
       setState(() => _error = apiErrorMessage(e));
     } finally {
@@ -70,14 +66,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     SizedBox(width: 12),
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('Cahaya Optima Karya', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-                      Text('HRIS · Absensi', style: TextStyle(color: Color(0xD9FFFFFF), fontSize: 12.5, fontWeight: FontWeight.w600)),
+                      Text('HRIS · Karyawan', style: TextStyle(color: Color(0xD9FFFFFF), fontSize: 12.5, fontWeight: FontWeight.w600)),
                     ]),
                   ]),
                   const SizedBox(height: 22),
-                  const Text('Absen cukup\ndari HP kamu',
+                  const Text('Urusan kantor\ndari HP kamu',
                       style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, height: 1.15, letterSpacing: -0.5)),
                   const SizedBox(height: 10),
-                  const Text('Selfie, cek lokasi, selesai. Kurang dari 10 detik.',
+                  const Text('Lihat kehadiran, ajukan cuti, izin, dan lembur.',
                       style: TextStyle(color: Color(0xE0FFFFFF), fontSize: 15, height: 1.5)),
                 ]),
               ),
@@ -93,10 +89,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     if (notice != null) ...[
                       _banner(notice, AppColors.warningSoft, AppColors.warning),
-                      const SizedBox(height: 14),
-                    ],
-                    if (_pending != null) ...[
-                      _banner(_pending!, AppColors.primarySoft, AppColors.primaryDark),
                       const SizedBox(height: 14),
                     ],
                     const Text('Email atau NIK', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),

@@ -6,7 +6,7 @@ import '../t2_common/auth_image.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
 import '../t2_common/t2_ui.dart';
-import 'kabar_widgets.dart';
+import 'announcement_card.dart';
 
 final announcementListProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final res = await ref.read(t2ApiProvider).get('announcements');
@@ -29,7 +29,13 @@ class PengumumanListPage extends ConsumerWidget {
       backgroundColor: T2Colors.bg,
       body: SafeArea(
         child: Column(children: [
-          const BackHeader(title: 'Pengumuman HR'),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Pengumuman HR', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: T2Colors.ink)),
+            ),
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: AsyncBody<List<Map<String, dynamic>>>(

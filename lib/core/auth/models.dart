@@ -6,7 +6,6 @@ class AppUser {
     required this.email,
     required this.employee,
     required this.isLeader,
-    this.device,
   });
 
   final int id;
@@ -16,7 +15,6 @@ class AppUser {
 
   /// Punya bawahan (manager_id) — menu atasan di Profil.
   final bool isLeader;
-  final DeviceInfoDto? device;
 
   String get firstName => employee.fullName.split(' ').first;
 
@@ -27,26 +25,15 @@ class AppUser {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
-  factory AppUser.fromJson(Map<String, dynamic> json, {Map<String, dynamic>? device}) {
-    final dev = device ?? (json['device'] as Map?)?.cast<String, dynamic>();
+  factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
       id: json['id'] as int,
       name: json['name'] as String? ?? '',
       email: json['email'] as String?,
       employee: EmployeeInfo.fromJson((json['employee'] as Map).cast<String, dynamic>()),
       isLeader: json['is_leader'] as bool? ?? false,
-      device: dev == null ? null : DeviceInfoDto.fromJson(dev),
     );
   }
-
-  AppUser copyWith({DeviceInfoDto? device}) => AppUser(
-        id: id,
-        name: name,
-        email: email,
-        employee: employee,
-        isLeader: isLeader,
-        device: device ?? this.device,
-      );
 }
 
 class EmployeeInfo {
@@ -90,22 +77,4 @@ class EmployeeInfo {
       managerName: manager?['full_name'] as String?,
     );
   }
-}
-
-class DeviceInfoDto {
-  DeviceInfoDto({required this.id, required this.status, this.model, this.platform, required this.consented});
-
-  final int id;
-  final String status;
-  final String? model;
-  final String? platform;
-  final bool consented;
-
-  factory DeviceInfoDto.fromJson(Map<String, dynamic> json) => DeviceInfoDto(
-        id: json['id'] as int,
-        status: json['status'] as String? ?? 'active',
-        model: json['model'] as String?,
-        platform: json['platform'] as String?,
-        consented: json['consented'] as bool? ?? false,
-      );
 }

@@ -27,15 +27,6 @@ class AuthSignedIn extends AuthState {
   final AppUser user;
 }
 
-/// Login ditolak karena HP ini menunggu persetujuan HR / ditolak.
-class DevicePendingException implements Exception {
-  DevicePendingException(this.message, this.code);
-  final String message;
-  final String code;
-  @override
-  String toString() => message;
-}
-
 class AuthController extends Notifier<AuthState> {
   @override
   AuthState build() {
@@ -72,8 +63,8 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> retry() => _restore();
 
-  /// Masuk dengan email/NIK + kata sandi. Melempar [DevicePendingException]
-  /// bila akun sudah terikat ke HP lain (menunggu HR).
+  /// Masuk dengan email/NIK + kata sandi. Akun boleh dipakai di HP mana saja;
+  /// identitas HP tetap dikirim agar token terikat ke HP ini.
   Future<void> login(String login, String password) async {
     final identity = await DeviceIdentity.load();
     final deviceId = await _storage.deviceId();
@@ -86,26 +77,10 @@ class AuthController extends Notifier<AuthState> {
       });
       final data = (res.data['data'] as Map).cast<String, dynamic>();
       await _storage.writeToken(data['token'] as String);
-      state = AuthSignedIn(AppUser.fromJson(
-        (data['user'] as Map).cast<String, dynamic>(),
-        device: (data['device'] as Map).cast<String, dynamic>(),
-      ));
+      state = AuthSignedIn(AppUser.fromJson((data['user'] as Map).cast<String, dynamic>()));
     } catch (e) {
-      final err = toApiException(e);
-      if (err.statusCode == 403 && (err.code == 'device_pending' || err.code == 'device_rejected')) {
-        throw DevicePendingException(err.message, err.code!);
-      }
-      throw err;
+      throw toApiException(e);
     }
-  }
-
-  /// Persetujuan penyimpanan selfie & lokasi (layar "Daftarkan HP ini").
-  Future<void> giveConsent() async {
-    final current = state;
-    if (current is! AuthSignedIn) return;
-    final res = await _dio.post('/auth/consent', data: {'agree': true});
-    final device = ((res.data['data'] as Map)['device'] as Map).cast<String, dynamic>();
-    state = AuthSignedIn(current.user.copyWith(device: DeviceInfoDto.fromJson(device)));
   }
 
   Future<void> refreshProfile() async {

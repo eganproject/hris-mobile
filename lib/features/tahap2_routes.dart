@@ -1,15 +1,13 @@
 import 'package:go_router/go_router.dart';
 
 import 'jadwal/jadwal_page.dart';
-import 'kabar/buat_post_page.dart';
-import 'kabar/pengumuman_page.dart';
-import 'kabar/post_detail_page.dart';
 import 'notifikasi/notifikasi_page.dart';
 import 'organisasi/struktur_page.dart';
 import 'pengajuan/leave_form_page.dart';
 import 'pengajuan/overtime_form_page.dart';
 import 'pengajuan/pengajuan_list_page.dart';
 import 'pengajuan/swap_form_page.dart';
+import 'pengumuman/pengumuman_page.dart';
 import 'profil/data_diri_page.dart';
 import 'tim/jadwal_tim_page.dart';
 import 'tim/persetujuan_page.dart';
@@ -21,7 +19,7 @@ import 'tim/tim_hari_ini_page.dart';
 /// /pengajuan/tukar?date=YYYY-MM-DD, /pengajuan/semua.
 /// Lainnya: /jadwal, /notifikasi, /profil/data-diri, /struktur.
 /// Atasan: /tim/persetujuan, /tim/hari-ini, /tim/jadwal.
-/// Kabar: /kabar/tulis, /kabar/pengumuman, /kabar/pengumuman/:id, /kabar/post/:id.
+/// Pengumuman HR: /pengumuman/:id (daftarnya ada di menu bawah /pengumuman).
 final List<RouteBase> tahap2Routes = [
   GoRoute(
     path: '/pengajuan/cuti',
@@ -40,14 +38,8 @@ final List<RouteBase> tahap2Routes = [
   GoRoute(path: '/tim/persetujuan', builder: (_, _) => const PersetujuanPage()),
   GoRoute(path: '/tim/hari-ini', builder: (_, _) => const TimHariIniPage()),
   GoRoute(path: '/tim/jadwal', builder: (_, _) => const JadwalTimPage()),
-  GoRoute(path: '/kabar/tulis', builder: (_, _) => const BuatPostPage()),
-  GoRoute(path: '/kabar/pengumuman', builder: (_, _) => const PengumumanListPage()),
   GoRoute(
-    path: '/kabar/pengumuman/:id',
+    path: '/pengumuman/:id',
     builder: (_, state) => PengumumanDetailPage(id: int.parse(state.pathParameters['id']!)),
-  ),
-  GoRoute(
-    path: '/kabar/post/:id',
-    builder: (_, state) => PostDetailPage(id: int.parse(state.pathParameters['id']!)),
   ),
 ];

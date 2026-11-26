@@ -23,7 +23,6 @@ final unreadNotificationCountProvider = FutureProvider.autoDispose<int>((ref) as
       'correction' || 'attendance' => (icon: Icons.fingerprint, bg: const Color(0xFFEDE9FE), fg: const Color(0xFF6D28D9)),
       'schedule' => (icon: Icons.calendar_month_outlined, bg: const Color(0xFFE0F2FE), fg: const Color(0xFF0369A1)),
       'announcement' => (icon: Icons.campaign_outlined, bg: const Color(0xFFFEF3C7), fg: const Color(0xFFB45309)),
-      'kabar' => (icon: Icons.chat_bubble_outline, bg: const Color(0xFFDCFCE7), fg: const Color(0xFF15803D)),
       _ => (icon: Icons.notifications_none, bg: T2Colors.bg, fg: T2Colors.muted),
     };
 
@@ -31,8 +30,7 @@ final unreadNotificationCountProvider = FutureProvider.autoDispose<int>((ref) as
 String? notificationRoute(Map<String, dynamic> n) {
   final meta = asMap(n['meta']);
   return switch (n['category']) {
-    'announcement' when meta['announcement_id'] != null => '/kabar/pengumuman/${meta['announcement_id']}',
-    'kabar' when meta['post_id'] != null => '/kabar/post/${meta['post_id']}',
+    'announcement' when meta['announcement_id'] != null => '/pengumuman/${meta['announcement_id']}',
     'schedule' => '/jadwal',
     'leave' || 'overtime' || 'swap' => '/pengajuan/semua',
     'correction' => '/koreksi',
