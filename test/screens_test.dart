@@ -108,6 +108,24 @@ void main() {
     expect(find.textContaining('Dewi Wulandari'), findsOneWidget);
   });
 
+  for (final width in [320.0, 390.0]) {
+    testWidgets('karyawan WFH melihat tombol absen selfie (lebar ${width.toInt()})', (tester) async {
+      _wfhToday = true;
+      addTearDown(() => _wfhToday = false);
+      await _pump(tester, leader: false, path: '/', width: width);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Absen masuk dengan selfie'), findsOneWidget);
+      if (shots != null && width == 390) {
+        await expectLater(find.byType(MaterialApp), matchesGoldenFile(Uri.file('$shots/wfh_beranda.png')));
+      }
+    });
+  }
+
+  testWidgets('karyawan kantor tidak melihat tombol absen', (tester) async {
+    await _pump(tester, leader: false, path: '/');
+    expect(find.textContaining('dengan selfie'), findsNothing);
+  });
+
   testWidgets('layar masuk tampil', (tester) async {
     await _pump(tester, leader: false, path: '/login', signedIn: false);
     expect(find.text('Masuk'), findsOneWidget);
@@ -216,6 +234,9 @@ Map<String, dynamic> _asset(int id, String state) => {
       'condition_in': state == 'returned' ? 'Baik' : null,
     };
 
+/// Diaktifkan tes WFH: hari ini kerja dari rumah, tombol absen selfie muncul.
+bool _wfhToday = false;
+
 Object? _response(String path, Map<String, dynamic> q, bool leader) {
   final today = _d(0);
   switch (path) {
@@ -306,6 +327,12 @@ Object? _response(String path, Map<String, dynamic> q, bool leader) {
           {'id': 'b', 'category': 'leave', 'title': 'Cuti disetujui', 'message': 'Cuti tahunan 2 hari Anda disetujui.', 'created_at': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(), 'read': true, 'meta': <String, dynamic>{}},
           {'id': 'c', 'category': 'schedule', 'title': 'Jadwal minggu depan terbit', 'message': 'Cek dan konfirmasi jadwalmu.', 'created_at': DateTime.now().subtract(const Duration(days: 3)).toIso8601String(), 'read': true, 'meta': <String, dynamic>{}},
         ],
+      };
+    case '/attendance/remote':
+      return {
+        'data': _wfhToday
+            ? {'allowed': true, 'status': 'wfh', 'status_label': 'WFH', 'work_date': _d(0), 'clock_in': null, 'clock_out': null, 'next': 'in'}
+            : {'allowed': false, 'status': null, 'next': null},
       };
     case '/leave-types':
       return {
