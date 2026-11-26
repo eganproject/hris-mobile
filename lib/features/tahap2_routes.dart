@@ -41,7 +41,7 @@ final List<RouteBase> tahap2Routes = [
   GoRoute(path: '/struktur', builder: (_, _) => const StrukturPage()),
   GoRoute(path: '/rekan', builder: (_, _) => const RekanPage()),
   GoRoute(path: '/tim/persetujuan', builder: (_, _) => const PersetujuanPage()),
-  GoRoute(path: '/tim/hari-ini', builder: (_, _) => const TimHariIniPage()),
+  GoRoute(path: '/tim/hari-ini', builder: (_, state) => TimHariIniPage(initialState: state.uri.queryParameters['status'])),
   GoRoute(path: '/tim/jadwal', builder: (_, _) => const JadwalTimPage()),
   GoRoute(
     path: '/tim/anggota/:id',

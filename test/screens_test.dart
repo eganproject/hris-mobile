@@ -49,6 +49,7 @@ void main() {
       ('/pengajuan/cuti?kategori=cuti', false),
       ('/tim/anggota/4', true),
       ('/tim/hari-ini', true),
+      ('/tim/hari-ini?status=late', true),
       ('/tim/persetujuan', true),
       ('/pengajuan/lembur', false),
       ('/pengajuan/cuti?kategori=sakit', false),
@@ -96,6 +97,33 @@ void main() {
     await tester.tap(find.text('Cuti duka'));
     await tester.pumpAndSettle();
     expect(find.text('Cuti duka'), findsOneWidget);
+  });
+
+  testWidgets('tim hari ini bisa dicari dan disaring status', (tester) async {
+    await _pump(tester, leader: true, path: '/tim/hari-ini', width: 320);
+    expect(find.text('Budi Santoso'), findsOneWidget);
+    await tester.ensureVisible(find.textContaining('Telat 1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Telat 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Dewi Wulandari'), findsOneWidget);
+    expect(find.text('Budi Santoso'), findsNothing);
+    await tester.ensureVisible(find.textContaining('Semua'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Semua'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'yoga');
+    await tester.pumpAndSettle();
+    expect(find.text('Yoga Hidayat'), findsOneWidget);
+    expect(find.text('Dewi Wulandari'), findsNothing);
+    expect(tester.takeException(), isNull);
+    if (shots != null) await expectLater(find.byType(MaterialApp), matchesGoldenFile(Uri.file('$shots/tim_filter_cari.png')));
+  });
+
+  testWidgets('chip belum absen di tab Tim membuka daftar tersaring', (tester) async {
+    await _pump(tester, leader: true, path: '/tim/hari-ini?status=not_yet');
+    expect(find.text('Yoga Hidayat'), findsOneWidget);
+    expect(find.text('Budi Santoso'), findsNothing);
   });
 
   testWidgets('pilihan rekan bisa dicari', (tester) async {
@@ -418,6 +446,8 @@ Object? _response(String path, Map<String, dynamic> q, bool leader) {
           };
       return {
         'data': {
+          'date': q['date'] ?? _d(0),
+          'is_today': q['date'] == null || q['date'] == _d(0),
           'counts': {'present': 10, 'late': 2, 'not_yet': 1, 'leave': 1},
           'team_size': 14,
           'as_of': '09:12',
