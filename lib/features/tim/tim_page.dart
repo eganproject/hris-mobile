@@ -98,9 +98,19 @@ class _TimPageState extends ConsumerState<TimPage> {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        StatusPill(label: '${c('not_yet')} belum absen', tone: c('not_yet') > 0 ? PillTone.accent : PillTone.onPrimary),
-                        StatusPill(label: '${c('leave')} cuti', tone: PillTone.onPrimary),
-                        StatusPill(label: '${c('late')} terlambat', tone: PillTone.onPrimary),
+                        // Tiap chip membuka Tim hari ini yang sudah tersaring.
+                        GestureDetector(
+                          onTap: () => context.push('/tim/hari-ini?status=not_yet'),
+                          child: StatusPill(label: '${c('not_yet')} belum absen', tone: c('not_yet') > 0 ? PillTone.accent : PillTone.onPrimary),
+                        ),
+                        GestureDetector(
+                          onTap: () => context.push('/tim/hari-ini?status=leave'),
+                          child: StatusPill(label: '${c('leave')} cuti', tone: PillTone.onPrimary),
+                        ),
+                        GestureDetector(
+                          onTap: () => context.push('/tim/hari-ini?status=late'),
+                          child: StatusPill(label: '${c('late')} terlambat', tone: PillTone.onPrimary),
+                        ),
                       ],
                     ),
                   ],
