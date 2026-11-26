@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -8,407 +6,277 @@ import '../../core/api/api_client.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/util/format.dart';
+import '../../core/widgets/company_logo.dart';
 import '../../core/widgets/ui.dart';
 import '../absen/attendance_models.dart';
 import '../absen/attendance_repository.dart';
-import '../absen/offline_queue.dart';
-import '../profil/profil_providers.dart';
-import '../tim/leader_panel.dart';
+import '../jadwal/jadwal_page.dart';
+import '../notifikasi/notifikasi_page.dart';
+import '../pengajuan/pengajuan_providers.dart';
+import '../pengajuan/pengajuan_widgets.dart';
+import '../pengumuman/announcement_card.dart';
+import '../pengumuman/pengumuman_page.dart';
+import '../t2_common/t2_format.dart';
 
-/// Beranda: jam, jadwal hari ini, lokasi kantor, tombol bulat Masuk/Pulang,
-/// ringkasan jam masuk & pulang, dan panel Tim saya untuk atasan. Saat sesi
-/// terbuka tampil "Sedang bekerja".
-class BerandaPage extends ConsumerStatefulWidget {
+DateTime _monday(DateTime d) => DateTime(d.year, d.month, d.day).subtract(Duration(days: d.weekday - 1));
+
+/// Beranda karyawan: kehadiran hari ini (hanya dibaca; absen di tablet kantor
+/// atau mesin gudang), jalan pintas pengajuan, sisa cuti, jadwal besok, dan
+/// pengumuman HR terbaru.
+class BerandaPage extends ConsumerWidget {
   const BerandaPage({super.key});
 
   @override
-  ConsumerState<BerandaPage> createState() => _BerandaPageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    final status = ref.watch(attendanceStatusProvider);
+    final unread = ref.watch(unreadNotificationCountProvider).asData?.value ?? 0;
+    final now = DateTime.now();
+    final e = user?.employee;
+
+    return DotScaffold(
+      child: RefreshIndicator(
+        color: AppColors.navy,
+        onRefresh: () async {
+          ref.invalidate(attendanceStatusProvider);
+          ref.invalidate(pengajuanSummaryProvider);
+          ref.invalidate(announcementListProvider);
+          ref.invalidate(unreadNotificationCountProvider);
+          ref.invalidate(scheduleWeekProvider);
+          await ref.read(attendanceStatusProvider.future).then((_) {}, onError: (_) {});
+        },
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 110),
+          children: [
+            Row(children: [
+              const CompanyLogo(size: 42),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Halo, ${user?.firstName ?? ''}',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -.2)),
+                  Text(
+                    [e?.jobPosition, e?.branchName].whereType<String>().join(' · '),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
+                  ),
+                ]),
+              ),
+              SquareIconButton(
+                icon: Icons.notifications_none_rounded,
+                tooltip: 'Notifikasi',
+                badge: unread > 0,
+                onTap: () async {
+                  await context.push('/notifikasi');
+                  ref.invalidate(unreadNotificationCountProvider);
+                },
+              ),
+            ]),
+            const SizedBox(height: 18),
+            if (status.hasError && !status.hasValue)
+              AppCard(child: Text(apiErrorMessage(status.error!), style: const TextStyle(color: AppColors.danger)))
+            else
+              _TodayCard(data: status.value, now: now),
+            const SizedBox(height: 22),
+            const Text('Ajukan', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            Row(children: [
+              _Shortcut('Cuti', 'cuti', '/pengajuan/cuti?kategori=cuti'),
+              const SizedBox(width: 10),
+              _Shortcut('Izin/Sakit', 'izin', '/pengajuan/cuti?kategori=izin'),
+              const SizedBox(width: 10),
+              _Shortcut('Lembur', 'lembur', '/pengajuan/lembur'),
+              const SizedBox(width: 10),
+              _Shortcut('Tukar', 'tukar', '/pengajuan/tukar'),
+            ]),
+            const SizedBox(height: 14),
+            const IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Expanded(child: _LeaveBalanceCard()),
+                SizedBox(width: 10),
+                Expanded(child: _TomorrowCard()),
+              ]),
+            ),
+            const SizedBox(height: 22),
+            Row(children: [
+              const Expanded(child: Text('Pengumuman HR', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700))),
+              GestureDetector(
+                onTap: () => context.go('/info'),
+                child: const Text('Lihat semua', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.navy)),
+              ),
+            ]),
+            const SizedBox(height: 10),
+            const _LatestAnnouncement(),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _BerandaPageState extends ConsumerState<BerandaPage> with WidgetsBindingObserver {
-  Timer? _clock;
-  DateTime _now = DateTime.now();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _clock = Timer.periodic(const Duration(seconds: 15), (_) => setState(() => _now = DateTime.now()));
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _clock?.cancel();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      ref.invalidate(attendanceStatusProvider);
-      ref.read(offlineQueueProvider.notifier).flush();
-    }
-  }
+class _TodayCard extends StatelessWidget {
+  const _TodayCard({required this.data, required this.now});
+  final AttendanceStatusDto? data;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
-    final status = ref.watch(attendanceStatusProvider);
-    final queue = ref.watch(offlineQueueProvider);
-
-    // Absen yang masih antre menentukan tombol berikutnya walau server belum tahu.
-    final pending = queue.latest;
-    final data = status.value;
-    final working = pending != null ? pending.type == 'in' : (data?.sessionOpen ?? false);
-    final clockInAt = pending?.type == 'in' ? pending!.capturedAt : data?.clockInAt;
-
-    return Scaffold(
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: () async {
-          ref.invalidate(attendanceStatusProvider);
-          ref.invalidate(profileProvider);
-          await ref.read(offlineQueueProvider.notifier).flush();
-          await ref.read(attendanceStatusProvider.future).catchError((_) => data!);
-        },
-        child: Stack(children: [
-          GradientHeaderBackground(height: working ? 250 : 330),
-          SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 120),
-              children: [
-                _header(user?.initials ?? '', user?.firstName ?? ''),
-                if (working)
-                  _workingHeader(data)
-                else
-                  _clockHeader(data),
-                if (queue.items.isNotEmpty) _queueBanner(queue),
-                if (status.hasError && data == null) _errorCard(status.error!),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                  child: working ? _workingBody(data, clockInAt) : _idleBody(data),
-                ),
-                const LeaderPanel(),
-              ],
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _header(String initials, String firstName) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-        child: Row(children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.22),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
-            ),
-            alignment: Alignment.center,
-            child: Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(Fmt.greeting(_now), style: const TextStyle(color: Color(0xD9FFFFFF), fontSize: 13)),
-              Text('Halo, $firstName', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-            ]),
-          ),
-          Semantics(
-            label: 'Notifikasi',
-            button: true,
-            child: InkResponse(
-              onTap: () => context.push('/notifikasi'),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), shape: BoxShape.circle),
-                child: const Icon(Icons.notifications_none, color: Colors.white),
-              ),
-            ),
-          ),
-        ]),
-      );
-
-  Widget _clockHeader(AttendanceStatusDto? data) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
-        child: Column(children: [
-          Text(Fmt.longDate(_now), style: const TextStyle(color: Color(0xD9FFFFFF), fontSize: 13, fontWeight: FontWeight.w600)),
-          Text(Fmt.time(_now),
-              style: const TextStyle(color: Colors.white, fontSize: 56, fontWeight: FontWeight.w800, letterSpacing: -2, height: 1.05)),
-          const SizedBox(height: 8),
-          StatusPill(
-            label: data == null ? 'Memuat jadwal…' : '${data.isRemote ? '${data.modeLabel} · ' : ''}${data.shiftLabel}',
-            tone: PillTone.onPrimary,
-            icon: Icons.schedule,
-          ),
-        ]),
-      );
-
-  Widget _workingHeader(AttendanceStatusDto? data) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-        child: Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                '${Fmt.shortDate(_now)}${data?.shiftName != null ? ' · ${data!.shiftName}' : ''}',
-                style: const TextStyle(color: Color(0xD9FFFFFF), fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              const Text('Sedang bekerja', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
-            ]),
-          ),
-          if (data != null)
-            StatusPill(
-              label: data.isRemote ? data.modeLabel : (data.location?.name ?? 'Kantor'),
-              tone: PillTone.onPrimary,
-              icon: Icons.place_outlined,
-            ),
-        ]),
-      );
-
-  Widget _idleBody(AttendanceStatusDto? data) {
     final day = data?.attendance;
-    final doneToday = day?.clockIn != null && day?.clockOut != null;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (data != null) _locationCard(data),
-      const SizedBox(height: 16),
-      Center(child: _bigButton(data)),
-      if (doneToday)
-        const Padding(
-          padding: EdgeInsets.only(top: 6),
-          child: Text('Absen hari ini sudah lengkap.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted)),
-        ),
-      const SizedBox(height: 16),
-      _timesCard(day?.clockIn, day?.clockOut),
-    ]);
-  }
+    final clockIn = day?.clockIn ?? data?.clockInAt;
+    final (String, PillTone)? state = switch (day?.status) {
+      _ when clockIn == null => null,
+      'late' => ('Terlambat ${day!.lateMinutes} mnt', PillTone.accent),
+      _ => ('Tepat waktu', PillTone.accent),
+    };
+    final shift = data == null
+        ? 'Memuat jadwal…'
+        : data!.shiftName == null
+            ? (data!.isDayOff ? 'Libur' : 'Tanpa jadwal')
+            : '${data!.shiftName} ${data!.shiftStart}–${data!.shiftEnd}';
 
-  Widget _locationCard(AttendanceStatusDto data) {
-    if (data.isRemote) {
-      return AppCard(
-        child: Row(children: [
-          _iconBox(Icons.home_work_outlined),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Hari ini ${data.modeLabel}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              const Text('Absen dari mana saja. Lokasi tetap dicatat, tanpa batas area.',
-                  style: TextStyle(fontSize: 13, color: AppColors.muted)),
-            ]),
-          ),
+    return NavyHeroCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(Fmt.longDate(now).replaceAll(RegExp(r' \d{4}$'), ''),
+            style: const TextStyle(fontSize: 12.5, color: Color(0xB3FFFFFF), fontWeight: FontWeight.w500)),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _time('Masuk', clockIn)),
+          Container(width: 1, height: 44, color: Colors.white12),
+          const SizedBox(width: 16),
+          Expanded(child: _time('Pulang', day?.clockOut)),
         ]),
-      );
-    }
-    final loc = data.location;
-    final enabled = loc?.enabled ?? false;
-    return AppCard(
-      child: Row(children: [
-        _iconBox(Icons.apartment_outlined),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(loc?.name ?? 'Lokasi kerja belum diatur', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text(
-              enabled
-                  ? (loc!.hasGeofence ? 'Radius absen ${loc.radiusM} m dari titik kantor' : 'Titik kantor belum diatur HR')
-                  : 'Lokasi ini belum memakai absen aplikasi. Gunakan mesin absen.',
-              style: const TextStyle(fontSize: 13, color: AppColors.muted),
-            ),
-          ]),
+        const SizedBox(height: 14),
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          StatusPill(label: shift, tone: PillTone.onPrimary, icon: Icons.schedule),
+          if (state != null) StatusPill(label: state.$1, tone: state.$2),
+        ]),
+        const SizedBox(height: 12),
+        Text(
+          clockIn == null
+              ? 'Absen masuk dan pulang dilakukan di tablet kantor atau mesin absen.'
+              : 'Tercatat dari tablet kantor atau mesin absen. Absen pulang juga di sana.',
+          style: const TextStyle(fontSize: 12, color: Color(0x99FFFFFF), height: 1.4),
         ),
       ]),
     );
   }
 
-  Widget _iconBox(IconData icon) => Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(16)),
-        child: Icon(icon, color: AppColors.primaryDark),
-      );
-
-  Widget _bigButton(AttendanceStatusDto? data) {
-    final subtitle = data?.isRemote == true ? 'Selfie saja' : 'Selfie + lokasi';
-    return Semantics(
-      button: true,
-      label: 'Absen masuk',
-      child: GestureDetector(
-        onTap: () => context.push('/absen/in'),
-        child: Container(
-          width: 188,
-          height: 188,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.primary.withValues(alpha: 0.10),
-            boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.06), spreadRadius: 14)],
-          ),
-          alignment: Alignment.center,
-          child: Container(
-            width: 152,
-            height: 152,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFF59E0B), AppColors.primaryDark],
-              ),
-              boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 34, offset: const Offset(0, 16))],
-            ),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.login_rounded, color: Colors.white, size: 34),
-              const SizedBox(height: 4),
-              const Text('Masuk', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
-              Text(subtitle, style: const TextStyle(color: Color(0xE6FFFFFF), fontSize: 12, fontWeight: FontWeight.w600)),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _workingBody(AttendanceStatusDto? data, DateTime? clockInAt) {
-    final elapsed = clockInAt == null ? Duration.zero : _now.difference(clockInAt);
-    final targetMinutes = _shiftMinutes(data) ?? 9 * 60;
-    final progress = (elapsed.inMinutes / targetMinutes).clamp(0.0, 1.0);
-    final expires = data?.expiresAt;
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      AppCard(
-        padding: const EdgeInsets.all(20),
-        child: Column(children: [
-          SizedBox(
-            width: 196,
-            height: 196,
-            child: Stack(alignment: Alignment.center, children: [
-              SizedBox.expand(
-                child: CircularProgressIndicator(
-                  value: progress,
-                  strokeWidth: 12,
-                  strokeCap: StrokeCap.round,
-                  backgroundColor: AppColors.chip,
-                  color: AppColors.navy,
-                ),
-              ),
-              Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('Sudah bekerja', style: TextStyle(fontSize: 12.5, color: AppColors.muted, fontWeight: FontWeight.w600)),
-                Text(Fmt.duration(elapsed), style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, letterSpacing: -1)),
-                Text('dari ${(targetMinutes / 60).toStringAsFixed(targetMinutes % 60 == 0 ? 0 : 1)} jam',
-                    style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
-              ]),
-            ]),
-          ),
-          const SizedBox(height: 16),
-          Semantics(
-            button: true,
-            label: 'Absen pulang',
-            child: InkWell(
-              borderRadius: BorderRadius.circular(29),
-              onTap: () => context.push('/absen/out'),
-              child: Ink(
-                height: 58,
-                decoration: BoxDecoration(
-                  gradient: AppColors.navyGradient,
-                  borderRadius: BorderRadius.circular(29),
-                  boxShadow: const [BoxShadow(color: Color(0x4D16255A), blurRadius: 24, offset: Offset(0, 12))],
-                ),
-                child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.logout_rounded, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('Absen Pulang', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
-                ]),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            [
-              if (data?.shiftEnd != null) 'Jadwal pulang ${data!.shiftEnd}',
-              if (expires != null) 'sesi berakhir ${Fmt.time(expires)}${expires.day != _now.day ? ' (${Fmt.shortDate(expires)})' : ''}',
-            ].join(' · '),
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
-          ),
-        ]),
-      ),
-      const SizedBox(height: 16),
-      _timesCard(clockInAt, null),
-    ]);
-  }
-
-  int? _shiftMinutes(AttendanceStatusDto? data) {
-    final s = data?.shiftStart, e = data?.shiftEnd;
-    if (s == null || e == null) return null;
-    int m(String t) => int.parse(t.split(':')[0]) * 60 + int.parse(t.split(':')[1]);
-    var diff = m(e) - m(s);
-    if (diff <= 0) diff += 24 * 60;
-    return diff;
-  }
-
-  Widget _timesCard(DateTime? clockIn, DateTime? clockOut) => AppCard(
-        child: IntrinsicHeight(
-          child: Row(children: [
-            Expanded(child: _timeCell(Icons.login_rounded, 'Masuk', clockIn)),
-            const VerticalDivider(width: 12, color: AppColors.line),
-            Expanded(child: _timeCell(Icons.logout_rounded, 'Pulang', clockOut)),
-          ]),
-        ),
-      );
-
-  Widget _timeCell(IconData icon, String label, DateTime? at) {
-    final has = at != null;
-    return Row(children: [
-      Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(color: has ? AppColors.primarySoft : AppColors.chip, borderRadius: BorderRadius.circular(12)),
-        child: Icon(icon, size: 18, color: has ? AppColors.primaryDark : AppColors.faint),
-      ),
-      const SizedBox(width: 10),
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted, fontWeight: FontWeight.w600)),
+  Widget _time(String label, DateTime? at) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xB3FFFFFF), fontWeight: FontWeight.w500)),
         Text(Fmt.time(at),
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: has ? AppColors.ink : AppColors.faint)),
-      ]),
-    ]);
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -.5,
+              color: at == null ? Colors.white38 : Colors.white,
+            )),
+      ]);
+}
+
+class _Shortcut extends StatelessWidget {
+  const _Shortcut(this.label, this.category, this.route);
+  final String label;
+  final String category;
+  final String route;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = categoryStyle(category);
+    return Expanded(
+      child: AppCard(
+        padding: const EdgeInsets.fromLTRB(4, 12, 4, 10),
+        radius: 14,
+        onTap: () => context.push(route),
+        child: Column(children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(color: s.bg, borderRadius: BorderRadius.circular(11)),
+            child: Icon(s.icon, color: s.fg, size: 20),
+          ),
+          const SizedBox(height: 7),
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
   }
+}
 
-  Widget _queueBanner(QueueState queue) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-        child: AppCard(
-          child: Row(children: [
-            const Icon(Icons.cloud_upload_outlined, color: AppColors.primaryDark),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '${queue.items.length} absen tersimpan di HP, menunggu sinyal. Terkirim otomatis.',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-            ),
-            TextButton(
-              onPressed: queue.sending ? null : () => ref.read(offlineQueueProvider.notifier).flush(),
-              child: Text(queue.sending ? 'Mengirim…' : 'Kirim'),
-            ),
-          ]),
-        ),
-      );
+class _LeaveBalanceCard extends ConsumerWidget {
+  const _LeaveBalanceCard();
 
-  Widget _errorCard(Object error) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-        child: AppCard(
-          child: Row(children: [
-            const Icon(Icons.wifi_off, color: AppColors.muted),
-            const SizedBox(width: 12),
-            Expanded(child: Text(apiErrorMessage(error), style: const TextStyle(fontSize: 13))),
-            TextButton(onPressed: () => ref.invalidate(attendanceStatusProvider), child: const Text('Muat ulang')),
-          ]),
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(pengajuanSummaryProvider).asData?.value;
+    final balances = data?['balances'] as List? ?? const [];
+    final b = balances.isEmpty ? null : Map<String, dynamic>.from(balances.first as Map);
+    final quota = (b?['quota'] as num?)?.toInt();
+    final remaining = (b?['remaining'] as num?)?.toInt();
+    final ratio = quota == null || quota == 0 ? 0.0 : ((remaining ?? 0) / quota).clamp(0.0, 1.0);
+
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      onTap: () => context.go('/pengajuan'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Sisa cuti ${b?['year'] ?? ''}'.trim(), style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        const SizedBox(height: 4),
+        Text.rich(TextSpan(children: [
+          TextSpan(text: remaining == null ? '–' : '$remaining', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          TextSpan(text: quota == null ? '' : ' / $quota hari', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+        ])),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(value: ratio, minHeight: 6, color: AppColors.accent, backgroundColor: AppColors.chip),
         ),
-      );
+      ]),
+    );
+  }
+}
+
+class _TomorrowCard extends ConsumerWidget {
+  const _TomorrowCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final week = ref.watch(scheduleWeekProvider(ymd(_monday(tomorrow)))).asData?.value;
+    final days = (week?['days'] as List? ?? const []).map((d) => Map<String, dynamic>.from(d as Map));
+    final day = days.where((d) => d['date'] == ymd(tomorrow)).firstOrNull;
+    final shift = day?['shift'] as Map?;
+
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      onTap: () => context.go('/kehadiran?tab=jadwal'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Besok · ${dayLong(tomorrow)}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        const SizedBox(height: 4),
+        Text(day?['label'] as String? ?? (week == null ? '–' : 'Belum dijadwalkan'),
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 2),
+        Text(shift == null ? ' ' : '${shift['start_time']}–${shift['end_time']}',
+            style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+      ]),
+    );
+  }
+}
+
+class _LatestAnnouncement extends ConsumerWidget {
+  const _LatestAnnouncement();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final list = ref.watch(announcementListProvider);
+    return list.when(
+      loading: () => const AppCard(child: SizedBox(height: 60, child: Center(child: CircularProgressIndicator()))),
+      error: (e, _) => AppCard(child: Text(apiErrorMessage(e), style: const TextStyle(color: AppColors.muted))),
+      data: (items) => items.isEmpty
+          ? const AppCard(child: Text('Belum ada pengumuman.', style: TextStyle(color: AppColors.muted)))
+          : AnnouncementCard(item: items.first, onReturn: () => ref.invalidate(announcementListProvider)),
+    );
+  }
 }

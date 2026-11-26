@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/widgets/ui.dart';
 import '../t2_common/async_body.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
@@ -15,9 +16,8 @@ class DataDiriPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider);
-    return Scaffold(
-      backgroundColor: T2Colors.bg,
-      body: SafeArea(
+    return DotScaffold(
+      child: SafeArea(
         child: Column(children: [
           BackHeader(
             title: 'Data diri',

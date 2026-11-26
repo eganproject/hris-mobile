@@ -3,28 +3,30 @@
 Aplikasi Flutter (Android 7+ dan iOS 15+) untuk HRIS Cahaya Optima Karya.
 Backend: repo `eganproject/hris` (Laravel), API di `/api/mobile/v1`.
 
-## Tahap 1 — absensi
-- Login dengan akun HRIS web (email atau NIK). Satu akun = satu HP; HP
-  pertama aktif otomatis, ganti HP disetujui HR (menu web *Absen Aplikasi HP*).
-- Persetujuan penyimpanan selfie & lokasi (UU PDP) sekali per HP.
-- Absen masuk/pulang: selfie kamera depan (tekan tombol, tanpa cek kedip),
-  lokasi GPS dibandingkan radius Lokasi Kerja; WFH/dinas luar tanpa radius.
-- Lokasi palsu (fake GPS) dan HP root/jailbreak ditolak server; percobaannya tercatat.
-- Antrean offline: absen tanpa sinyal disimpan dengan ID unik dan jam saat
-  tombol ditekan, dikirim ulang otomatis (tiap 30 detik / saat online) sampai
-  server menjawab.
-- Setelah absen masuk, tombol berganti Absen Pulang sampai pulang (batas sesi
-  diatur di Pengaturan web, default 23 jam 50 menit).
-- Riwayat bulanan dan koreksi absensi.
+## Fungsi
+Aplikasi layanan mandiri karyawan. Absen masuk/pulang TIDAK lewat HP:
+kantor memakai tablet pengenalan wajah, gudang memakai mesin absen.
+- Login dengan akun HRIS web (email atau NIK), boleh dari HP mana saja.
+- Menu bawah karyawan: Beranda · Kehadiran · Pengajuan · Info · Profil.
+  Atasan (punya bawahan): Info diganti Tim, dengan badge persetujuan.
+- Beranda: jam masuk/pulang hari ini (hanya dibaca), jalan pintas pengajuan,
+  sisa cuti, jadwal besok, pengumuman HR terbaru.
+- Kehadiran: riwayat bulanan (+ koreksi) dan jadwal saya per minggu.
+- Pengajuan cuti/izin/sakit, lembur, tukar jadwal, koreksi.
+- Info: pengumuman HR dan rekan kerja (cari, status aktif).
+- Tim (atasan): tim hari ini, persetujuan, atur jadwal tim, struktur.
+- Profil: foto profil (kamera/galeri), data diri, struktur organisasi, notifikasi, keluar.
+Rute fitur di `lib/features/tahap2_routes.dart`.
 
-## Tahap 2
-Pengajuan, jadwal, notifikasi, fitur atasan, Kabar, struktur organisasi:
-fitur di `lib/features/<fitur>/`, rute di `lib/features/tahap2_routes.dart`.
+Tampilan (desain ulang 26 Nov 2026) selaras dengan HRIS web dan tablet:
+font Inter, navy `#16255A`, aksen kuning `#F9AE05`, latar abu bertitik.
+Token warna di `lib/core/theme/app_colors.dart`, widget umum di
+`lib/core/widgets/ui.dart` (DotScaffold, NavyHeroCard, SegmentedTabs, dsb.).
 
 ## Struktur
 ```
 lib/core/     api client (apiClientProvider, apiErrorMessage), auth, router, tema, widget umum
-lib/features/ auth, beranda, absen, riwayat, koreksi, kabar, pengajuan, profil
+lib/features/ auth, beranda, absen (status & riwayat), kehadiran, jadwal, koreksi, pengajuan, info, pengumuman, profil, tim
 ```
 
 ## Menjalankan
@@ -35,5 +37,11 @@ flutter build apk --release --dart-define=API_BASE_URL=https://alamat-hris-anda
 ```
 Tanpa `API_BASE_URL`, aplikasi memakai `https://cok-hris.com`. Untuk Laravel lokal dari emulator Android pakai `--dart-define=API_BASE_URL=http://10.0.2.2:8000`.
 
-Catatan iOS: membaca nama/BSSID Wi-Fi butuh capability *Access WiFi Information*
-di Xcode; tanpa itu absen tetap jalan, hanya bukti Wi-Fi yang kosong.
+## Tes
+```
+flutter analyze
+flutter test
+```
+`test/screens_test.dart` menampilkan setiap tab (karyawan & atasan) dengan data
+API palsu dan gagal bila ada galat atau tampilan meluber. Tangkapan layar:
+`SHOTS_DIR=/folder flutter test test/screens_test.dart --update-goldens`.

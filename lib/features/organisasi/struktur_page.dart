@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/widgets/ui.dart';
 import '../t2_common/async_body.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_ui.dart';
@@ -19,9 +20,8 @@ class StrukturPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final value = ref.watch(orgProvider);
     final d = value.asData?.value;
-    return Scaffold(
-      backgroundColor: T2Colors.bg,
-      body: SafeArea(
+    return DotScaffold(
+      child: SafeArea(
         child: Column(children: [
           BackHeader(
             title: 'Struktur organisasi',

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/widgets/ui.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
 import '../t2_common/t2_ui.dart';
@@ -128,9 +129,8 @@ class _JadwalTimPageState extends ConsumerState<JadwalTimPage> {
     }
     bool hasGap(int i) => members.any((m) => asList(m['days'])[i]['mode'] == 'none');
 
-    return Scaffold(
-      backgroundColor: T2Colors.bg,
-      body: SafeArea(
+    return DotScaffold(
+      child: SafeArea(
         child: MaxWidth(
           width: 720,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

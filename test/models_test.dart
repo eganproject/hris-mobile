@@ -1,28 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hris_mobile/features/absen/attendance_models.dart';
-import 'package:hris_mobile/features/absen/clock_request.dart';
 
 void main() {
-  test('antrean offline: ClockRequest tersimpan dan terbaca utuh', () {
-    final r = ClockRequest(
-      clientUuid: 'b3f1c1de-0000-4000-8000-000000000001',
-      type: 'in',
-      capturedAt: DateTime.utc(2026, 11, 25, 0, 50),
-      photoPath: '/data/absen-antre/x.jpg',
-      latitude: -6.2,
-      longitude: 106.8,
-      accuracy: 12,
-      isMockLocation: false,
-      isRooted: false,
-      note: 'Rapat klien',
-    );
-    final back = ClockRequest.decodeList(ClockRequest.encodeList([r])).single;
-    expect(back.clientUuid, r.clientUuid);
-    expect(back.capturedAt.toUtc(), r.capturedAt);
-    expect(back.isMockLocation, isFalse);
-    expect(back.note, 'Rapat klien');
-  });
-
   test('status absen dari API terbaca', () {
     final s = AttendanceStatusDto.fromJson({
       'server_time': '2026-11-25T07:50:00+07:00',

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/ui.dart';
 import '../pengajuan/pengajuan_widgets.dart';
 import '../profil/profil_providers.dart';
 import '../t2_common/async_body.dart';
@@ -27,32 +29,13 @@ class _PersetujuanPageState extends ConsumerState<PersetujuanPage> {
 
   static const _filters = [('semua', 'Semua'), ('cuti', 'Cuti'), ('izin', 'Izin'), ('sakit', 'Sakit'), ('lembur', 'Lembur')];
 
-  void _refresh() {
-    ref.invalidate(approvalsProvider);
-    ref.invalidate(profileProvider);
-  }
+  void _refresh() => refreshApprovals(ref);
 
   Future<void> _decide(Map<String, dynamic> item, bool approve) async {
-    String? notes;
-    if (!approve) {
-      notes = await _askReason(context);
-      if (notes == null) return;
-    }
     final key = '${item['kind']}-${item['id']}';
     setState(() => _busy.add(key));
-    try {
-      final res = await ref.read(t2ApiProvider).post(
-            'approvals/${item['kind']}/${item['id']}/${approve ? 'approve' : 'reject'}',
-            data: approve ? null : {'notes': notes!.isEmpty ? null : notes},
-          );
-      if (mounted) showSnack(context, (res['message'] as String?) ?? (approve ? 'Disetujui.' : 'Ditolak.'));
-      _refresh();
-    } catch (e) {
-      if (mounted) showSnack(context, t2Error(e), error: true);
-      _refresh();
-    } finally {
-      if (mounted) setState(() => _busy.remove(key));
-    }
+    await decideApproval(context, ref, item, approve);
+    if (mounted) setState(() => _busy.remove(key));
   }
 
   @override
@@ -61,9 +44,8 @@ class _PersetujuanPageState extends ConsumerState<PersetujuanPage> {
     final counts = value.asData?.value['meta'] is Map ? Map<String, dynamic>.from(value.asData!.value['meta']['counts'] as Map? ?? {}) : <String, dynamic>{};
     final total = counts.values.fold<int>(0, (a, b) => a + ((b as num?)?.toInt() ?? 0));
 
-    return Scaffold(
-      backgroundColor: T2Colors.bg,
-      body: SafeArea(
+    return DotScaffold(
+      child: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           BackHeader(title: 'Persetujuan', subtitle: value.hasValue ? '$total menunggu keputusan Anda' : null),
           const SizedBox(height: 12),
@@ -82,8 +64,8 @@ class _PersetujuanPageState extends ConsumerState<PersetujuanPage> {
                       showCheckmark: false,
                       selectedColor: T2Colors.navy,
                       backgroundColor: Colors.white,
-                      side: BorderSide.none,
-                      shape: const StadiumBorder(),
+                      side: const BorderSide(color: AppColors.line),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       labelStyle: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: _type == key ? Colors.white : T2Colors.ink,
@@ -108,7 +90,7 @@ class _PersetujuanPageState extends ConsumerState<PersetujuanPage> {
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
                   itemCount: items.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (_, i) => _ApprovalCard(
+                  itemBuilder: (_, i) => ApprovalCard(
                     item: items[i],
                     busy: _busy.contains('${items[i]['kind']}-${items[i]['id']}'),
                     onApprove: () => _decide(items[i], true),
@@ -124,8 +106,33 @@ class _PersetujuanPageState extends ConsumerState<PersetujuanPage> {
   }
 }
 
+void refreshApprovals(WidgetRef ref) {
+  ref.invalidate(approvalsProvider);
+  ref.invalidate(profileProvider);
+}
+
+/// Setujui / tolak satu pengajuan (tolak meminta alasan dulu). Dipakai di
+/// layar Persetujuan dan tab Tim.
+Future<void> decideApproval(BuildContext context, WidgetRef ref, Map<String, dynamic> item, bool approve) async {
+  String? notes;
+  if (!approve) {
+    notes = await askRejectReason(context);
+    if (notes == null) return;
+  }
+  try {
+    final res = await ref.read(t2ApiProvider).post(
+          'approvals/${item['kind']}/${item['id']}/${approve ? 'approve' : 'reject'}',
+          data: approve ? null : {'notes': notes!.isEmpty ? null : notes},
+        );
+    if (context.mounted) showSnack(context, (res['message'] as String?) ?? (approve ? 'Disetujui.' : 'Ditolak.'));
+  } catch (e) {
+    if (context.mounted) showSnack(context, t2Error(e), error: true);
+  }
+  refreshApprovals(ref);
+}
+
 /// Minta alasan penolakan. null = batal; string kosong = tanpa alasan.
-Future<String?> _askReason(BuildContext context) {
+Future<String?> askRejectReason(BuildContext context) {
   final ctrl = TextEditingController();
   return showDialog<String>(
     context: context,
@@ -136,15 +143,15 @@ Future<String?> _askReason(BuildContext context) {
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
         TextButton(
           onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-          child: const Text('Tolak', style: TextStyle(color: Color(0xFFB91C1C))),
+          child: const Text('Tolak', style: TextStyle(color: AppColors.danger)),
         ),
       ],
     ),
   );
 }
 
-class _ApprovalCard extends StatelessWidget {
-  const _ApprovalCard({required this.item, required this.busy, required this.onApprove, required this.onReject});
+class ApprovalCard extends StatelessWidget {
+  const ApprovalCard({super.key, required this.item, required this.busy, required this.onApprove, required this.onReject});
   final Map<String, dynamic> item;
   final bool busy;
   final VoidCallback onApprove;
@@ -177,7 +184,7 @@ class _ApprovalCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(color: style.bg, borderRadius: BorderRadius.circular(99)),
-            child: Text(_categoryLabel(item['category'] as String?), style: TextStyle(color: style.fg, fontWeight: FontWeight.w800, fontSize: 12)),
+            child: Text(approvalCategoryLabel(item['category'] as String?), style: TextStyle(color: style.fg, fontWeight: FontWeight.w600, fontSize: 11.5)),
           ),
         ]),
         const SizedBox(height: 12),
@@ -189,7 +196,7 @@ class _ApprovalCard extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: T2Colors.bg, borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: T2Colors.bg, borderRadius: BorderRadius.circular(10)),
             child: Text('“${item['reason']}”', style: const TextStyle(fontSize: 13.5, color: T2Colors.ink)),
           ),
         ],
@@ -203,10 +210,10 @@ class _ApprovalCard extends StatelessWidget {
             child: OutlinedButton(
               onPressed: busy ? null : onReject,
               style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(46),
-                shape: const StadiumBorder(),
-                foregroundColor: const Color(0xFFB91C1C),
-                side: const BorderSide(color: Color(0xFFFECACA)),
+                minimumSize: const Size.fromHeight(42),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                foregroundColor: AppColors.danger,
+                side: const BorderSide(color: Color(0xFFFECDCA)),
               ),
               child: const Text('Tolak', style: TextStyle(fontWeight: FontWeight.w800)),
             ),
@@ -216,9 +223,9 @@ class _ApprovalCard extends StatelessWidget {
             child: FilledButton(
               onPressed: busy ? null : onApprove,
               style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(46),
-                shape: const StadiumBorder(),
-                backgroundColor: T2Colors.orange,
+                minimumSize: const Size.fromHeight(42),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                backgroundColor: AppColors.navy,
               ),
               child: busy
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -231,7 +238,7 @@ class _ApprovalCard extends StatelessWidget {
   }
 }
 
-String _categoryLabel(String? c) => switch (c) {
+String approvalCategoryLabel(String? c) => switch (c) {
       'izin' => 'Izin',
       'sakit' => 'Sakit',
       'lembur' => 'Lembur',

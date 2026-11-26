@@ -1,43 +1,40 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Warna & komponen kecil bersama layar Tahap 2, mengikuti mockup
-/// (oranye utama #EA7F06, navy #16255A sebagai aksen, kartu bulat).
-class T2Colors {
-  static const orange = Color(0xFFEA7F06);
-  static const orangeLight = Color(0xFFFBB040);
-  static const orangeDark = Color(0xFFC2560A);
-  static const orangeSoft = Color(0xFFFDEBD3);
-  static const orangeText = Color(0xFF9A4A05);
-  static const navy = Color(0xFF16255A);
-  static const ink = Color(0xFF0F1733);
-  static const muted = Color(0xFF5B6478);
-  static const faint = Color(0xFF8A93A8);
-  static const bg = Color(0xFFF4F6FA);
-  static const line = Color(0xFFE5E9F2);
+import '../../core/theme/app_colors.dart';
 
-  static const gradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [orangeLight, orange, orangeDark],
-    stops: [0, .45, 1],
-  );
+/// Warna bersama layar fitur. Nama "orange*" dipertahankan agar layar lama
+/// tetap jalan, tetapi nilainya kini mengikuti desain baru (navy + kuning).
+class T2Colors {
+  static const orange = AppColors.navy;
+  static const orangeLight = AppColors.navyLight;
+  static const orangeDark = AppColors.navyDark;
+  static const orangeSoft = AppColors.navySoft;
+  static const orangeText = AppColors.navy;
+  static const navy = AppColors.navy;
+  static const accent = AppColors.accent;
+  static const ink = AppColors.ink;
+  static const muted = AppColors.muted;
+  static const faint = AppColors.faint;
+  static const bg = AppColors.background;
+  static const line = AppColors.line;
+
+  static const gradient = AppColors.headerGradient;
 }
 
 /// Warna chip status dari "tone" API (success / warning / danger / neutral / info).
 ({Color bg, Color fg}) toneColors(String? tone) {
   switch (tone) {
     case 'success':
-      return (bg: const Color(0xFFDCFCE7), fg: const Color(0xFF15803D));
+      return (bg: AppColors.successSoft, fg: AppColors.success);
     case 'warning':
-      return (bg: const Color(0xFFFFEDD5), fg: const Color(0xFF9A3412));
+      return (bg: AppColors.accentSoft, fg: AppColors.accentText);
     case 'danger':
-      return (bg: const Color(0xFFFEE2E2), fg: const Color(0xFFB91C1C));
+      return (bg: AppColors.dangerSoft, fg: AppColors.danger);
     case 'info':
-      return (bg: const Color(0xFFE0F2FE), fg: const Color(0xFF0369A1));
     case 'accent':
-      return (bg: const Color(0xFFEDE9FE), fg: const Color(0xFF6D28D9));
+      return (bg: AppColors.infoSoft, fg: AppColors.info);
     default:
-      return (bg: const Color(0xFFF1F3F7), fg: T2Colors.muted);
+      return (bg: AppColors.chip, fg: AppColors.chipText);
   }
 }
 
@@ -50,15 +47,15 @@ class StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = toneColors(tone);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
       decoration: BoxDecoration(color: c.bg, borderRadius: BorderRadius.circular(99)),
-      child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: c.fg)),
+      child: Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: c.fg)),
     );
   }
 }
 
 class T2Card extends StatelessWidget {
-  const T2Card({super.key, required this.child, this.padding = const EdgeInsets.all(14), this.onTap, this.radius = 20, this.color});
+  const T2Card({super.key, required this.child, this.padding = const EdgeInsets.all(14), this.onTap, this.radius = 16, this.color});
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
@@ -72,10 +69,8 @@ class T2Card extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? Colors.white,
         borderRadius: BorderRadius.circular(radius),
-        boxShadow: const [
-          BoxShadow(color: Color(0x14111C45), blurRadius: 30, offset: Offset(0, 10)),
-          BoxShadow(color: Color(0x0A111C45), blurRadius: 6, offset: Offset(0, 2)),
-        ],
+        border: Border.all(color: AppColors.line),
+        boxShadow: AppColors.cardShadow,
       ),
       child: child,
     );
@@ -84,7 +79,7 @@ class T2Card extends StatelessWidget {
   }
 }
 
-/// Lingkaran inisial (atau foto bila ada).
+/// Lingkaran inisial navy dengan huruf kuning (atau foto bila ada).
 class PersonAvatar extends StatelessWidget {
   const PersonAvatar({super.key, required this.person, this.size = 42, this.online, this.ringColor = Colors.white});
   final Map<String, dynamic>? person;
@@ -94,20 +89,16 @@ class PersonAvatar extends StatelessWidget {
   final bool? online;
   final Color ringColor;
 
-  static const _palette = [Color(0xFFF59E0B), Color(0xFF6366F1), Color(0xFF10B981), Color(0xFFEF4444), Color(0xFF0EA5E9), Color(0xFF8B5CF6)];
-
   @override
   Widget build(BuildContext context) {
-    final name = (person?['name'] ?? '?') as String;
     final initials = (person?['initials'] ?? '?') as String;
     final photo = person?['photo_url'] as String?;
-    final color = _palette[name.hashCode.abs() % _palette.length];
     final avatar = CircleAvatar(
       radius: size / 2,
-      backgroundColor: color,
+      backgroundColor: AppColors.navy,
       foregroundImage: photo != null ? NetworkImage(photo) : null,
       onForegroundImageError: photo != null ? (_, _) {} : null,
-      child: Text(initials, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: size * .36)),
+      child: Text(initials, style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700, fontSize: size * .34)),
     );
     if (online == null) return avatar;
     final dot = (size * .3).clamp(10.0, 20.0);
@@ -123,7 +114,7 @@ class PersonAvatar extends StatelessWidget {
             width: dot,
             height: dot,
             decoration: BoxDecoration(
-              color: online! ? const Color(0xFF16A34A) : const Color(0xFFB6BDC9),
+              color: online! ? const Color(0xFF17B26A) : AppColors.inputLine,
               shape: BoxShape.circle,
               border: Border.all(color: ringColor, width: dot * .2),
             ),
@@ -157,7 +148,7 @@ class PageTitle extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       child: Row(children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -.4, color: T2Colors.ink))),
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -.4, color: T2Colors.ink))),
         ?trailing,
       ]),
     );
@@ -175,9 +166,9 @@ class SectionLabel extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
       child: Row(children: [
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: T2Colors.ink))),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: T2Colors.ink))),
         if (action != null)
-          GestureDetector(onTap: onAction, child: Text(action!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: T2Colors.orangeText))),
+          GestureDetector(onTap: onAction, child: Text(action!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: T2Colors.navy))),
       ]),
     );
   }
@@ -203,7 +194,8 @@ class EmptyNote extends StatelessWidget {
 
 /// Header layar sekunder: tombol kembali bulat + judul + subjudul.
 class BackHeader extends StatelessWidget {
-  const BackHeader({super.key, required this.title, this.subtitle, this.trailing});
+  const BackHeader({super.key, required this.title, this.subtitle, this.trailing, this.showBack = true});
+  final bool showBack;
   final String title;
   final String? subtitle;
   final Widget? trailing;
@@ -213,16 +205,18 @@ class BackHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
       child: Row(children: [
-        T2Card(
-          radius: 22,
-          padding: const EdgeInsets.all(10),
-          onTap: () => Navigator.of(context).maybePop(),
-          child: const Icon(Icons.chevron_left, size: 24, color: T2Colors.ink),
-        ),
-        const SizedBox(width: 12),
+        if (showBack) ...[
+          T2Card(
+            radius: 12,
+            padding: const EdgeInsets.all(9),
+            onTap: () => Navigator.of(context).maybePop(),
+            child: const Icon(Icons.chevron_left, size: 22, color: T2Colors.ink),
+          ),
+          const SizedBox(width: 12),
+        ],
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: T2Colors.ink)),
+            Text(title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -.2, color: T2Colors.ink)),
             if (subtitle != null) Text(subtitle!, style: const TextStyle(fontSize: 13, color: T2Colors.muted)),
           ]),
         ),
@@ -242,14 +236,14 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 54,
+      height: 52,
       width: double.infinity,
       child: FilledButton(
         style: FilledButton.styleFrom(
-          backgroundColor: T2Colors.orange,
-          shape: const StadiumBorder(),
+          backgroundColor: AppColors.navy,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
         onPressed: busy ? null : onPressed,
         child: busy
@@ -264,15 +258,8 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
-/// Input berlatar abu bulat seperti mockup.
-InputDecoration t2Input(String hint, {Widget? suffix}) => InputDecoration(
-      hintText: hint,
-      filled: true,
-      fillColor: T2Colors.bg,
-      suffixIcon: suffix,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-    );
+/// Input putih bergaris tipis (gaya tema).
+InputDecoration t2Input(String hint, {Widget? suffix}) => InputDecoration(hintText: hint, suffixIcon: suffix);
 
 void showSnack(BuildContext context, String message, {bool error = false}) {
   ScaffoldMessenger.of(context)
@@ -280,6 +267,6 @@ void showSnack(BuildContext context, String message, {bool error = false}) {
     ..showSnackBar(SnackBar(
       content: Text(message),
       behavior: SnackBarBehavior.floating,
-      backgroundColor: error ? const Color(0xFFB91C1C) : T2Colors.navy,
+      backgroundColor: error ? AppColors.danger : T2Colors.navy,
     ));
 }

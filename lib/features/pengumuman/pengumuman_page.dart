@@ -1,12 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/ui.dart';
 import '../t2_common/async_body.dart';
 import '../t2_common/auth_image.dart';
 import '../t2_common/t2_api.dart';
 import '../t2_common/t2_format.dart';
 import '../t2_common/t2_ui.dart';
-import 'kabar_widgets.dart';
 
 final announcementListProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final res = await ref.read(t2ApiProvider).get('announcements');
@@ -17,39 +18,6 @@ final announcementProvider = FutureProvider.autoDispose.family<Map<String, dynam
   final res = await ref.read(t2ApiProvider).get('announcements/$id');
   return asMap(res['data']);
 });
-
-/// Semua pengumuman HR untuk saya.
-class PengumumanListPage extends ConsumerWidget {
-  const PengumumanListPage({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final value = ref.watch(announcementListProvider);
-    return Scaffold(
-      backgroundColor: T2Colors.bg,
-      body: SafeArea(
-        child: Column(children: [
-          const BackHeader(title: 'Pengumuman HR'),
-          const SizedBox(height: 12),
-          Expanded(
-            child: AsyncBody<List<Map<String, dynamic>>>(
-              value: value,
-              onRefresh: () async => ref.invalidate(announcementListProvider),
-              builder: (items) => items.isEmpty
-                  ? ListView(children: const [EmptyNote('Belum ada pengumuman.', icon: Icons.campaign_outlined)])
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
-                      itemCount: items.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (_, i) => AnnouncementCard(item: items[i], onReturn: () => ref.invalidate(announcementListProvider)),
-                    ),
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-}
 
 /// Detail pengumuman + tombol "Saya sudah membaca" (tanda baca untuk HR).
 class PengumumanDetailPage extends ConsumerStatefulWidget {
@@ -82,9 +50,8 @@ class _PengumumanDetailPageState extends ConsumerState<PengumumanDetailPage> {
     final a = value.asData?.value;
     final read = a?['is_read'] == true;
 
-    return Scaffold(
-      backgroundColor: T2Colors.bg,
-      body: SafeArea(
+    return DotScaffold(
+      child: SafeArea(
         child: Column(children: [
           const BackHeader(title: 'Pengumuman'),
           const SizedBox(height: 12),
@@ -150,10 +117,10 @@ class _PengumumanDetailPageState extends ConsumerState<PengumumanDetailPage> {
                   ? Container(
                       height: 54,
                       alignment: Alignment.center,
-                      decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(99)),
+                      decoration: BoxDecoration(color: AppColors.successSoft, borderRadius: BorderRadius.circular(12)),
                       child: Text(
                         'Sudah dibaca${a['read_at'] != null ? ' · ${dateLabel(a['read_at'], year: false)}' : ''}',
-                        style: const TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.w800),
+                        style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w700),
                       ),
                     )
                   : PrimaryButton(label: 'Saya sudah membaca', icon: Icons.done_all, busy: _busy, onPressed: _markRead),

@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'package:hris_mobile/features/kabar/online_strip.dart';
-import 'package:hris_mobile/features/rekan/profil_rekan_page.dart';
-import 'package:hris_mobile/features/rekan/rekan_page.dart';
+import 'package:hris_mobile/features/info/info_page.dart';
 import 'package:hris_mobile/features/t2_common/t2_api.dart';
 import 'package:hris_mobile/features/tim/jadwal_tim_page.dart';
 
@@ -129,24 +127,11 @@ void main() {
     testWidgets('Rekan kerja tanpa overflow di lebar $w', (tester) async {
       await pumpAt(tester, size, const RekanPage());
       expect(tester.takeException(), isNull);
-      expect(find.text('Online (12)'), findsOneWidget);
-      await tester.tap(find.text('Offline (86)'));
+      expect(find.text('12 sedang aktif di aplikasi'), findsOneWidget);
+      await tester.tap(find.textContaining('Rekan Dengan Nama Sangat Panjang Sekali 1').first);
       await tester.pumpAndSettle();
-      expect(find.text('Aktif 2 jam lalu'), findsWidgets);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Profil rekan tanpa overflow di lebar $w', (tester) async {
-      await pumpAt(tester, size, const ProfilRekanPage(id: 1));
-      expect(tester.takeException(), isNull);
-      expect(find.text('Bergabung sejak'), findsOneWidget);
       expect(find.text('Maret 2022'), findsOneWidget);
-    });
-
-    testWidgets('Baris online Kabar tanpa overflow di lebar $w', (tester) async {
-      await pumpAt(tester, size, const Scaffold(body: OnlineStrip()));
       expect(tester.takeException(), isNull);
-      expect(find.text('Sedang online · 12'), findsOneWidget);
     });
   }
 }

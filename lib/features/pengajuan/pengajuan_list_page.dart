@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/widgets/ui.dart';
 import '../t2_common/async_body.dart';
 import '../t2_common/t2_ui.dart';
 import 'pengajuan_providers.dart';
@@ -31,9 +32,8 @@ class _PengajuanListPageState extends ConsumerState<PengajuanListPage> {
   Widget build(BuildContext context) {
     final list = ref.watch(pengajuanListProvider(_type));
 
-    return Scaffold(
-      backgroundColor: T2Colors.bg,
-      body: SafeArea(
+    return DotScaffold(
+      child: SafeArea(
         child: Column(children: [
           const BackHeader(title: 'Semua pengajuan'),
           const SizedBox(height: 12),

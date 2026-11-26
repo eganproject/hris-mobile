@@ -3,25 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../features/absen/clock_flow_page.dart';
-import '../../features/auth/daftar_hp_page.dart';
 import '../../features/auth/login_page.dart';
 import '../../features/beranda/beranda_page.dart';
-import '../../features/kabar/kabar_page.dart';
 import '../../features/koreksi/koreksi_page.dart';
 import '../../features/pengajuan/pengajuan_page.dart';
+import '../../features/info/info_page.dart';
+import '../../features/kehadiran/kehadiran_page.dart';
 import '../../features/profil/profil_page.dart';
-import '../../features/riwayat/riwayat_page.dart';
 import '../../features/tahap2_routes.dart';
+import '../../features/tim/tim_page.dart';
 import '../auth/auth_controller.dart';
 import '../shell/main_shell.dart';
 import '../theme/app_colors.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
 
-/// Rute aplikasi. Menu bawah (shell): / (Beranda), /kabar, /riwayat,
-/// /pengajuan, /profil. Layar penuh: /login, /daftar-hp, /absen/:type,
-/// /koreksi, ditambah [tahap2Routes].
+/// Rute aplikasi. Menu bawah (shell): / (Beranda), /kehadiran, /pengajuan,
+/// /info (karyawan) atau /tim (atasan), /profil. Layar penuh: /login,
+/// /koreksi, ditambah [tahap2Routes]. Urutan cabang = [ShellTab].
+/// Absen masuk/pulang tidak lagi lewat HP (pakai tablet kantor / mesin).
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authControllerProvider, (_, _) => refresh.value++);
@@ -36,22 +36,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
       if (auth is AuthLoading) return loc == '/splash' ? null : '/splash';
       if (auth is AuthSignedOut) return loc == '/login' ? null : '/login';
-      final user = (auth as AuthSignedIn).user;
-      if (user.device != null && !user.device!.consented) {
-        return loc == '/daftar-hp' ? null : '/daftar-hp';
-      }
-      if (loc == '/login' || loc == '/splash' || loc == '/daftar-hp') return '/';
+      if (loc == '/login' || loc == '/splash') return '/';
       return null;
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const _Splash()),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
-      GoRoute(path: '/daftar-hp', builder: (_, _) => const DaftarHpPage()),
-      GoRoute(
-        path: '/absen/:type',
-        parentNavigatorKey: _rootKey,
-        builder: (_, state) => ClockFlowPage(type: state.pathParameters['type'] == 'out' ? 'out' : 'in'),
-      ),
       GoRoute(
         path: '/koreksi',
         parentNavigatorKey: _rootKey,
@@ -62,9 +52,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _, shell) => MainShell(shell: shell),
         branches: [
           StatefulShellBranch(routes: [GoRoute(path: '/', builder: (_, _) => const BerandaPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/kabar', builder: (_, _) => const KabarPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/riwayat', builder: (_, _) => const RiwayatPage())]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/kehadiran',
+              builder: (_, state) => KehadiranPage(initialTab: state.uri.queryParameters['tab'] == 'jadwal' ? 1 : 0),
+            ),
+          ]),
           StatefulShellBranch(routes: [GoRoute(path: '/pengajuan', builder: (_, _) => const PengajuanPage())]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/info',
+              builder: (_, state) => InfoPage(initialTab: state.uri.queryParameters['tab'] == 'rekan' ? 1 : 0),
+            ),
+          ]),
+          StatefulShellBranch(routes: [GoRoute(path: '/tim', builder: (_, _) => const TimPage())]),
           StatefulShellBranch(routes: [GoRoute(path: '/profil', builder: (_, _) => const ProfilPage())]),
         ],
       ),
@@ -81,7 +82,7 @@ class _Splash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Scaffold(
-        backgroundColor: AppColors.primary,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        backgroundColor: AppColors.navy,
+        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
 }
