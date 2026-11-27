@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleListener;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/notifikasi/notifikasi_page.dart';
@@ -35,6 +37,11 @@ class PushService {
   }
 }
 
+Future<String> appVersion() async {
+  final p = await PackageInfo.fromPlatform();
+  return '${p.version}+${p.buildNumber}';
+}
+
 /// Menyambungkan HP ini ke server: daftarkan token setelah login, perbarui saat
 /// Firebase memberi token baru, dan buka layar yang tepat saat notifikasi diketuk.
 /// Cukup dibaca sekali (lihat HrisApp).
@@ -49,23 +56,56 @@ final pushRegistrarProvider = Provider<void>((ref) {
     }
   });
 
+  // Yang terakhir berhasil dikirim ke server, supaya membuka aplikasi
+  // berulang kali tidak mengirim ulang hal yang sama.
+  String? sentKey;
+  DateTime? sentAt;
+  var asked = false;
+
   Future<void> register([String? token]) async {
     if (ref.read(currentUserProvider) == null) return;
     try {
-      await messaging
-          .requestPermission(); // Android 13+: izin tampilkan notifikasi.
+      // Android 13+: izin tampilkan notifikasi. Dialognya hanya muncul sekali;
+      // sesudah itu cukup dibaca, supaya HR tahu bila izinnya dimatikan.
+      final settings = asked
+          ? await messaging.getNotificationSettings()
+          : await messaging.requestPermission();
+      asked = true;
+      final allowed =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
       // Token FCM klasik: pasti diterima API HTTP v1 di server. API FID yang
       // baru (register/onRegistered) belum dipakai sampai servernya diuji.
       // ignore: deprecated_member_use
       final value = token ?? await messaging.getToken();
       if (value == null) return;
+
+      final key = '$value|$allowed';
+      final fresh =
+          sentAt != null &&
+          DateTime.now().difference(sentAt!) < const Duration(hours: 6);
+      if (key == sentKey && fresh) return;
+
+      final version = await appVersion();
       await ref
           .read(apiClientProvider)
-          .post('/push-token', data: {'token': value});
+          .post(
+            '/push-token',
+            data: {'token': value, 'allowed': allowed, 'app_version': version},
+          );
+      sentKey = key;
+      sentAt = DateTime.now();
     } catch (e) {
+      // Dicoba lagi saat aplikasi dibuka berikutnya.
       debugPrint('Gagal mendaftarkan token notifikasi: $e');
     }
   }
+
+  // Token didaftarkan ulang setiap aplikasi dibuka lagi: token bisa berganti
+  // diam-diam, kiriman sebelumnya bisa gagal karena sinyal, dan izin
+  // notifikasi bisa dimatikan dari setelan HP.
+  final lifecycle = AppLifecycleListener(onResume: register);
+  ref.onDispose(lifecycle.dispose);
 
   void open(RemoteMessage message) {
     final route = message.data['category'] == 'attendance'
@@ -75,7 +115,10 @@ final pushRegistrarProvider = Provider<void>((ref) {
   }
 
   ref.listen<AuthState>(authControllerProvider, (prev, next) {
-    if (next is AuthSignedIn && prev is! AuthSignedIn) register();
+    if (next is AuthSignedIn && prev is! AuthSignedIn) {
+      sentKey = null; // akun baru di HP ini: wajib didaftarkan ulang
+      register();
+    }
   }, fireImmediately: true);
 
   subs

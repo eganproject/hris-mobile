@@ -87,6 +87,12 @@ class ProfilPage extends ConsumerWidget {
                   icon: Icons.notifications_none_rounded,
                   title: 'Notifikasi',
                   onTap: () => context.push('/notifikasi'),
+                ),
+                _MenuRow(
+                  icon: Icons.notifications_off_outlined,
+                  title: 'Notifikasi tidak muncul?',
+                  subtitle: 'Atur izin dan baterai HP supaya notifikasi absen masuk',
+                  onTap: () => context.push('/profil/notifikasi-hp'),
                   last: true,
                 ),
               ]),
