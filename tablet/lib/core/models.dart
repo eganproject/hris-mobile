@@ -13,6 +13,7 @@ class TabletSettings {
     this.repeatIgnoreSeconds = 60,
     this.pinEnabled = true,
     this.sessionMaxMinutes = 1430,
+    this.idleMinutes = 1,
   });
 
   factory TabletSettings.fromJson(Map<String, dynamic> j) => TabletSettings(
@@ -25,6 +26,7 @@ class TabletSettings {
         repeatIgnoreSeconds: (j['repeat_ignore_seconds'] as num?)?.toInt() ?? 60,
         pinEnabled: j['pin_enabled'] as bool? ?? true,
         sessionMaxMinutes: (j['session_max_minutes'] as num?)?.toInt() ?? 1430,
+        idleMinutes: (j['idle_minutes'] as num?)?.toInt() ?? 1,
       );
 
   final bool livenessEnabled;
@@ -36,6 +38,9 @@ class TabletSettings {
   final int repeatIgnoreSeconds;
   final bool pinEnabled;
   final int sessionMaxMinutes;
+
+  /// Menit tanpa wajah sebelum layar istirahat muncul (0 = tidak pernah).
+  final int idleMinutes;
 }
 
 class Schedule {

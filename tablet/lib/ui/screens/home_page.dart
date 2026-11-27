@@ -18,6 +18,7 @@ import '../theme.dart';
 import '../widgets/camera_panel.dart';
 import '../widgets/common.dart';
 import 'hr_menu_page.dart';
+import 'rest_screen.dart';
 
 enum _Phase { idle, scanning, result, unknown, pin, confirm }
 
@@ -76,6 +77,11 @@ class _HomePageState extends State<HomePage> {
   int _countdown = 0;
   Timer? _timer;
   Timer? _idleTimer;
+
+  // Layar istirahat: kamera mati setelah lama tanpa wajah atau sentuhan.
+  bool _resting = false;
+  DateTime _lastActivity = DateTime.now();
+  Timer? _restTimer;
   FrameData? _lastFrame;
   final Map<int, DateTime> _cooldown = {};
   late ConsecutiveTracker _tracker;
@@ -100,12 +106,14 @@ class _HomePageState extends State<HomePage> {
     _tracker = ConsecutiveTracker(_settings.consecutiveFrames);
     widget.camera.onFrame = _onFrame;
     widget.tablet.addListener(_onTablet);
+    _restTimer = Timer.periodic(const Duration(seconds: 5), (_) => _checkRest());
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _idleTimer?.cancel();
+    _restTimer?.cancel();
     widget.tablet.removeListener(_onTablet);
     if (widget.camera.onFrame == _onFrame) widget.camera.onFrame = null;
     super.dispose();
@@ -115,6 +123,29 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
+  void _touch() => _lastActivity = DateTime.now();
+
+  void _checkRest() {
+    final minutes = _settings.idleMinutes;
+    if (!mounted || _resting || minutes <= 0 || _phase != _Phase.idle) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return; // menu HR sedang dibuka
+    if (DateTime.now().difference(_lastActivity) < Duration(minutes: minutes)) return;
+    widget.camera.onFrame = null;
+    widget.camera.resting = true;
+    unawaited(widget.camera.stop());
+    setState(() => _resting = true);
+  }
+
+  Future<void> _wake() async {
+    if (!_resting) return;
+    _touch();
+    setState(() => _resting = false);
+    widget.camera.resting = false;
+    widget.camera.onFrame = _onFrame;
+    _reset();
+    await widget.camera.start();
+  }
+
   void _choose(String type) {
     if (_phase == _Phase.result || _phase == _Phase.confirm) return;
     setState(() => _choice = type);
@@ -122,6 +153,7 @@ class _HomePageState extends State<HomePage> {
 
   void _setPhase(_Phase p) {
     if (!mounted) return;
+    _touch();
     if (p == _Phase.unknown && _phase != _Phase.unknown) unawaited(Sounds.instance.unknown());
     setState(() => _phase = p);
     _idleTimer?.cancel();
@@ -166,6 +198,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     _lastFaceAt = now;
+    _touch();
     if (_phase == _Phase.idle) _setPhase(_Phase.scanning);
 
     if (!obs.usable || !FaceEngine.frontal(obs)) {
@@ -390,8 +423,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_resting) return RestScreen(onWake: _wake);
     final data = widget.tablet.data;
-    return Scaffold(
+    return Listener(
+      onPointerDown: (_) => _touch(),
+      child: Scaffold(
       body: DottedBackground(
         child: Column(children: [
           TabletHeader(tablet: widget.tablet, onLock: _phase == _Phase.result || _phase == _Phase.confirm ? null : _openHr),
@@ -408,6 +444,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ]),
       ),
+    ),
     );
   }
 
