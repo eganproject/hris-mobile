@@ -44,7 +44,24 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
+      - name: Pasang kunci tanda tangan APK
+        # Secret ANDROID_KEYSTORE_BASE64 (isi file .jks dalam base64) dan
+        # ANDROID_KEYSTORE_PASSWORD. Kunci yang SAMA di setiap build wajib ada
+        # supaya Android mau memasang versi baru di atas versi lama (wajib update).
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/cok-release.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/cok-release.jks" >> "$GITHUB_ENV"
+            echo "Kunci tanda tangan terpasang."
+          else
+            echo "::warning::Secret ANDROID_KEYSTORE_BASE64 belum diisi: APK ditandatangani kunci sementara, sehingga tidak bisa dipasang sebagai update di atas versi lama."
+          fi
+
       - name: Build APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')
           # --split-per-abi: satu APK per jenis prosesor. APK gabungan >100 MB

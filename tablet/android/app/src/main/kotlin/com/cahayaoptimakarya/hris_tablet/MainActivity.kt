@@ -14,6 +14,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        AppUpdateChannel.register(this, flutterEngine)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hris_tablet/lock").setMethodCallHandler { call, result ->
             try {
