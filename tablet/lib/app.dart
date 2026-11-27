@@ -44,7 +44,7 @@ class _TabletAppState extends State<TabletApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused) {
       widget.camera.stop();
     } else if (state == AppLifecycleState.resumed) {
-      widget.camera.start();
+      if (!widget.camera.resting) widget.camera.start();
       widget.tablet.syncNow();
     }
   }

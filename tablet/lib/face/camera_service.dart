@@ -14,6 +14,10 @@ class CameraService extends ChangeNotifier {
   String? error;
   bool _busy = false;
 
+  /// Kamera sengaja dimatikan oleh layar istirahat: jangan dinyalakan lagi
+  /// saat aplikasi kembali ke depan.
+  bool resting = false;
+
   Future<void> Function(FrameData frame)? onFrame;
 
   bool get ready => controller?.value.isInitialized ?? false;

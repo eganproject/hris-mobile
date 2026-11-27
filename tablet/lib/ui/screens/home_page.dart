@@ -18,6 +18,7 @@ import '../theme.dart';
 import '../widgets/camera_panel.dart';
 import '../widgets/common.dart';
 import 'hr_menu_page.dart';
+import 'rest_screen.dart';
 
 enum _Phase { idle, scanning, result, unknown, pin, confirm }
 
@@ -54,8 +55,8 @@ class _Result {
   final PendingRecord? record;
 }
 
-/// Layar utama tablet: pilih Absen Masuk / Absen Pulang di atas (terpilih
-/// otomatis sesuai jam), lalu hadapkan wajah.
+/// Layar utama tablet: pilih Absen Masuk / Absen Pulang di atas, lalu hadapkan
+/// wajah. Pilihan hanya berubah bila ditekan; tidak pindah sendiri.
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.tablet, required this.camera, required this.engine});
   final TabletController tablet;
@@ -76,13 +77,17 @@ class _HomePageState extends State<HomePage> {
   int _countdown = 0;
   Timer? _timer;
   Timer? _idleTimer;
+
+  // Layar istirahat: kamera mati setelah lama tanpa wajah atau sentuhan.
+  bool _resting = false;
+  DateTime _lastActivity = DateTime.now();
+  Timer? _restTimer;
   FrameData? _lastFrame;
   final Map<int, DateTime> _cooldown = {};
   late ConsecutiveTracker _tracker;
 
-  // Tombol Absen Masuk / Absen Pulang. null = ikut jam (pilihan bawaan).
-  String? _manualChoice;
-  Timer? _choiceTimer;
+  // Tombol Absen Masuk / Absen Pulang. Hanya berubah bila ditekan pengguna.
+  String _choice = 'in';
   _Pending? _pending;
 
   // NIK + PIN
@@ -101,13 +106,14 @@ class _HomePageState extends State<HomePage> {
     _tracker = ConsecutiveTracker(_settings.consecutiveFrames);
     widget.camera.onFrame = _onFrame;
     widget.tablet.addListener(_onTablet);
+    _restTimer = Timer.periodic(const Duration(seconds: 5), (_) => _checkRest());
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _idleTimer?.cancel();
-    _choiceTimer?.cancel();
+    _restTimer?.cancel();
     widget.tablet.removeListener(_onTablet);
     if (widget.camera.onFrame == _onFrame) widget.camera.onFrame = null;
     super.dispose();
@@ -117,25 +123,37 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
-  String get _choice => _manualChoice ?? widget.tablet.defaultChoiceAt(DateTime.now());
+  void _touch() => _lastActivity = DateTime.now();
+
+  void _checkRest() {
+    final minutes = _settings.idleMinutes;
+    if (!mounted || _resting || minutes <= 0 || _phase != _Phase.idle) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return; // menu HR sedang dibuka
+    if (DateTime.now().difference(_lastActivity) < Duration(minutes: minutes)) return;
+    widget.camera.onFrame = null;
+    widget.camera.resting = true;
+    unawaited(widget.camera.stop());
+    setState(() => _resting = true);
+  }
+
+  Future<void> _wake() async {
+    if (!_resting) return;
+    _touch();
+    setState(() => _resting = false);
+    widget.camera.resting = false;
+    widget.camera.onFrame = _onFrame;
+    _reset();
+    await widget.camera.start();
+  }
 
   void _choose(String type) {
     if (_phase == _Phase.result || _phase == _Phase.confirm) return;
-    setState(() => _manualChoice = type);
-    // Pilihan manual kembali ke otomatis bila tidak ada yang absen dalam 30 detik,
-    // supaya orang berikutnya tidak ikut mode yang salah.
-    _choiceTimer?.cancel();
-    _choiceTimer = Timer(const Duration(seconds: 30), _clearChoice);
-  }
-
-  void _clearChoice() {
-    _choiceTimer?.cancel();
-    if (!mounted) return;
-    setState(() => _manualChoice = null);
+    setState(() => _choice = type);
   }
 
   void _setPhase(_Phase p) {
     if (!mounted) return;
+    _touch();
     if (p == _Phase.unknown && _phase != _Phase.unknown) unawaited(Sounds.instance.unknown());
     setState(() => _phase = p);
     _idleTimer?.cancel();
@@ -180,6 +198,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     _lastFaceAt = now;
+    _touch();
     if (_phase == _Phase.idle) _setPhase(_Phase.scanning);
 
     if (!obs.usable || !FaceEngine.frontal(obs)) {
@@ -268,7 +287,6 @@ class _HomePageState extends State<HomePage> {
     final p = _pending;
     _pending = null;
     if (p != null) _cooldown[p.employee.id] = DateTime.now().add(const Duration(seconds: 6));
-    _clearChoice();
     _reset();
   }
 
@@ -351,7 +369,6 @@ class _HomePageState extends State<HomePage> {
     // Orang yang sama masih di depan kamera: jangan langsung dipindai ulang.
     _cooldown[r.employee.id] = DateTime.now().add(Duration(seconds: notMe ? 6 : 12));
     _result = null;
-    _clearChoice();
     _reset();
   }
 
@@ -406,8 +423,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_resting) return RestScreen(onWake: _wake);
     final data = widget.tablet.data;
-    return Scaffold(
+    return Listener(
+      onPointerDown: (_) => _touch(),
+      child: Scaffold(
       body: DottedBackground(
         child: Column(children: [
           TabletHeader(tablet: widget.tablet, onLock: _phase == _Phase.result || _phase == _Phase.confirm ? null : _openHr),
@@ -424,6 +444,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ]),
       ),
+    ),
     );
   }
 

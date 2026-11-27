@@ -203,13 +203,5 @@ void main() {
       final c = checkChosen(emp(), [LocalEvent('in', pagi)], pagi.add(const Duration(seconds: 20)), s, 'out');
       expect(c.outcome, ChoiceOutcome.ignored);
     });
-
-    test('pilihan bawaan mengikuti titik tengah jadwal', () {
-      final list = [emp(schedule: const Schedule('08:00', '17:00', 10))];
-      expect(defaultChoice(list, DateTime(2026, 11, 26, 12, 29)), 'in');
-      expect(defaultChoice(list, DateTime(2026, 11, 26, 12, 30)), 'out');
-      expect(defaultChoice(const [], DateTime(2026, 11, 26, 11, 0)), 'in');
-      expect(defaultChoice(const [], DateTime(2026, 11, 26, 13, 0)), 'out');
-    });
   });
 }
