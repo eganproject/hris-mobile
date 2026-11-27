@@ -1,5 +1,5 @@
 # Build APK Android di GitHub (tanpa Android Studio).
-# Cara pakai: tab Actions → "Build APK" → Run workflow → isi alamat HRIS →
+# Cara pakai: tab Actions → "Build APK" → Run workflow (alamat boleh kosong) →
 # tunggu ±10 menit → unduh "hris-cok-apk" di bagian Artifacts → pasang di HP.
 name: Build APK
 
@@ -7,8 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       api_base_url:
-        description: 'Alamat HRIS (mis. https://hris.domainanda.com), tanpa / di akhir'
-        required: true
+        description: 'Alamat HRIS lain (mis. https://hris.domainanda.com). Kosongkan = HRIS utama, APK langsung dikirim ke web.'
+        required: false
+        default: ''
   push:
     branches: ['**']
     # Aplikasi tablet punya workflow sendiri (build-apk-tablet.yml).
