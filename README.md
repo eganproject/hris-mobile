@@ -23,6 +23,15 @@ font Inter, navy `#16255A`, aksen kuning `#F9AE05`, latar abu bertitik.
 Token warna di `lib/core/theme/app_colors.dart`, widget umum di
 `lib/core/widgets/ui.dart` (DotScaffold, NavyHeroCard, SegmentedTabs, dsb.).
 
+## Unduh APK dari web HRIS
+- Karyawan: buka `https://alamat-hris/unduh-aplikasi` (juga ada tautan di halaman
+  login) → **Unduh APK**.
+- APK tablet absensi hanya bisa diunduh superadmin: web HRIS → System → Aplikasi Android.
+- Build di `main` mengirim APK otomatis ke HRIS bila secret repo
+  `HRIS_PUBLISH_TOKEN` diisi (sama dengan `APP_RELEASE_PUBLISH_TOKEN` di `.env`
+  HRIS). Alamat tujuan: variabel `HRIS_PUBLISH_URL`, atau `API_BASE_URL`.
+  Tanpa secret itu, unggah APK manual di System → Aplikasi Android.
+
 ## Struktur
 ```
 lib/core/     api client (apiClientProvider, apiErrorMessage), auth, router, tema, widget umum
