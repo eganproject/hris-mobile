@@ -47,7 +47,10 @@ jobs:
       - name: Build APK
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')
-          flutter build apk --release \
+          # --split-per-abi: satu APK per jenis prosesor. APK gabungan >100 MB
+          # sehingga ditolak Cloudflare (batas unggah 100 MB) saat dikirim ke HRIS;
+          # APK arm64 (hampir semua tablet Android sekarang) jauh lebih kecil.
+          flutter build apk --release --split-per-abi \
             --build-number=${{ github.run_number }} \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=APP_VERSION="$VERSION+${{ github.run_number }}"
@@ -55,7 +58,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: absensi-tablet-apk
-          path: tablet/build/app/outputs/flutter-apk/app-release.apk
+          # arm64-v8a untuk hampir semua tablet; armeabi-v7a untuk tablet 32-bit lama.
+          path: |
+            tablet/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            tablet/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
           retention-days: 14
 
       # Kirim APK ke HRIS (menu System > Aplikasi Android) supaya langsung bisa
@@ -75,9 +81,16 @@ jobs:
             echo "::notice::Secret HRIS_PUBLISH_TOKEN belum diisi: APK tidak dikirim ke HRIS (unggah manual di System > Aplikasi Android)."
             exit 0
           fi
+          APK=tablet/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          SIZE_MB=$(( $(stat -c %s "$APK") / 1024 / 1024 ))
+          echo "Ukuran APK arm64: ${SIZE_MB} MB"
+          if [ "$SIZE_MB" -ge 99 ]; then
+            echo "::error::APK tablet ${SIZE_MB} MB, melebihi batas unggah Cloudflare 100 MB."
+            exit 1
+          fi
           curl --fail-with-body -sS --retry 3 --retry-delay 10 --max-time 600 \
             -H "Authorization: Bearer $HRIS_PUBLISH_TOKEN" -H "Accept: application/json" \
             -F app=tablet \
-            -F "apk=@tablet/build/app/outputs/flutter-apk/app-release.apk" \
+            -F "apk=@$APK" \
             --form-string "notes=${NOTES:0:900}" \
             "${HRIS_PUBLISH_URL%/}/api/app-releases"
