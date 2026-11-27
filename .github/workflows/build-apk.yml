@@ -62,7 +62,7 @@ jobs:
         # Maven Central kadang menolak sementara (HTTP 429): coba sampai 3x dengan jeda.
         run: |
           for attempt in 1 2 3; do
-            if flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"; then
+            if flutter build apk --release --build-number=${{ github.run_number }} --dart-define=API_BASE_URL="$API_BASE_URL"; then
               exit 0
             fi
             echo "Build gagal (percobaan $attempt), coba lagi dalam $((attempt * 60)) detik..."
@@ -75,3 +75,27 @@ jobs:
           name: hris-cok-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
+
+      # Kirim APK ke HRIS (menu System > Aplikasi Android) supaya langsung bisa
+      # diunduh dari web. Hanya di main dan bila secret HRIS_PUBLISH_TOKEN diisi
+      # (= APP_RELEASE_PUBLISH_TOKEN di .env HRIS). Alamat: variabel HRIS_PUBLISH_URL
+      # atau API_BASE_URL.
+      - name: Kirim APK ke HRIS
+        # APK dari Run workflow dengan alamat HRIS lain tidak ikut dikirim.
+        if: github.ref == 'refs/heads/main' && !inputs.api_base_url
+        working-directory: ${{ github.workspace }}
+        env:
+          HRIS_PUBLISH_TOKEN: ${{ secrets.HRIS_PUBLISH_TOKEN }}
+          NOTES: ${{ github.event.head_commit.message }}
+          HRIS_PUBLISH_URL: ${{ vars.HRIS_PUBLISH_URL || vars.API_BASE_URL || 'https://cok-hris.com' }}
+        run: |
+          if [ -z "$HRIS_PUBLISH_TOKEN" ]; then
+            echo "::notice::Secret HRIS_PUBLISH_TOKEN belum diisi: APK tidak dikirim ke HRIS (unggah manual di System > Aplikasi Android)."
+            exit 0
+          fi
+          curl --fail-with-body -sS --retry 3 --retry-delay 10 --max-time 600 \
+            -H "Authorization: Bearer $HRIS_PUBLISH_TOKEN" -H "Accept: application/json" \
+            -F app=employee \
+            -F "apk=@build/app/outputs/flutter-apk/app-release.apk" \
+            --form-string "notes=${NOTES:0:900}" \
+            "${HRIS_PUBLISH_URL%/}/api/app-releases"

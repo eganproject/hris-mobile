@@ -6,8 +6,10 @@ dengan mesin X100-C dan aplikasi HP).
 
 ## Memasang tablet
 
-1. Unduh APK: GitHub → Actions → **Build APK Tablet** → run terbaru → Artifacts
-   → `absensi-tablet-apk`. Pasang di tablet (izinkan "sumber tidak dikenal").
+1. Unduh APK: web HRIS → **System → Aplikasi Android** (khusus superadmin) →
+   *Aplikasi tablet absensi wajah* → **Unduh APK**. Cadangan: GitHub → Actions →
+   **Build APK Tablet** → Artifacts `absensi-tablet-apk`. Pasang di tablet
+   (izinkan "sumber tidak dikenal").
 2. Di web HRIS: **Absensi → Tablet Absensi Wajah → Daftarkan tablet** (pilih
    Lokasi Kerja). Ketik kode pasangan yang muncul di tablet.
 3. Di web, klik **Atur PIN HR** untuk tablet itu (6 angka).
