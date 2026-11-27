@@ -33,6 +33,7 @@ class MainActivity : FlutterActivity() {
      */
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        AppUpdateChannel.register(this, flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hris/notif-help").setMethodCallHandler { call, result ->
             when (call.method) {
                 "status" -> result.success(

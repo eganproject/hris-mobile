@@ -30,11 +30,25 @@ android {
         versionName = flutter.versionName
     }
 
+    // Kunci tanda tangan TETAP (secret ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD
+    // di GitHub, ditulis workflow ke ANDROID_KEYSTORE_PATH). Tanpa kunci yang sama di
+    // setiap build, Android menolak memasang versi baru di atas versi lama, jadi
+    // fitur wajib update tidak bisa jalan. Tanpa secret: kunci debug (hanya untuk uji).
+    val releaseKeystore = System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "cok"
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (releaseKeystore != null) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
 }
@@ -53,4 +67,9 @@ flutter {
 // secret GOOGLE_SERVICES_JSON. Tanpa file itu APK tetap jadi, hanya tanpa push.
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
+}
+
+dependencies {
+    // FileProvider untuk membuka APK update di pemasang Android.
+    implementation("androidx.core:core-ktx:1.13.1")
 }
