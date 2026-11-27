@@ -60,17 +60,13 @@ final pushRegistrarProvider = Provider<void>((ref) {
   // berulang kali tidak mengirim ulang hal yang sama.
   String? sentKey;
   DateTime? sentAt;
-  var asked = false;
 
   Future<void> register([String? token]) async {
     if (ref.read(currentUserProvider) == null) return;
     try {
-      // Android 13+: izin tampilkan notifikasi. Dialognya hanya muncul sekali;
-      // sesudah itu cukup dibaca, supaya HR tahu bila izinnya dimatikan.
-      final settings = asked
-          ? await messaging.getNotificationSettings()
-          : await messaging.requestPermission();
-      asked = true;
+      // Izinnya diminta di alur izin (/izin); di sini cukup dibaca, supaya
+      // HR tahu bila izinnya dimatikan.
+      final settings = await messaging.getNotificationSettings();
       final allowed =
           settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional;

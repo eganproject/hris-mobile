@@ -58,6 +58,7 @@ void main() {
       ('/struktur', false),
       ('/profil/data-diri', false),
       ('/rekan', true),
+      ('/izin', false),
     ]) {
       testWidgets('$path tampil di lebar ${width.toInt()}', (tester) async {
         final old = FlutterError.onError;
@@ -75,6 +76,21 @@ void main() {
       });
     }
   }
+
+  testWidgets('alur izin: ringkasan, langkah, lalu selesai', (tester) async {
+    await _pump(tester, leader: false, path: '/izin');
+    expect(find.text('Siapkan HP-mu dulu'), findsOneWidget);
+    await tester.tap(find.text('Mulai'));
+    await tester.pumpAndSettle();
+    expect(find.text('Izinkan notifikasi'), findsOneWidget);
+    if (shots != null) await expectLater(find.byType(MaterialApp), matchesGoldenFile(Uri.file('$shots/izin_langkah1.png')));
+    while (find.text('Nanti saja').evaluate().isNotEmpty || find.text('Lanjut').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Nanti saja').evaluate().isNotEmpty ? find.text('Nanti saja') : find.text('Lanjut'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('HP-mu sudah siap'), findsOneWidget);
+    if (shots != null) await expectLater(find.byType(MaterialApp), matchesGoldenFile(Uri.file('$shots/izin_selesai.png')));
+  });
 
   testWidgets('notifikasi aset bisa diketuk dan dikonfirmasi', (tester) async {
     await _pump(tester, leader: false, path: '/notifikasi');

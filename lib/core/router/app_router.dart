@@ -8,6 +8,8 @@ import '../../features/beranda/beranda_page.dart';
 import '../../features/koreksi/koreksi_page.dart';
 import '../../features/pengajuan/pengajuan_page.dart';
 import '../../features/info/info_page.dart';
+import '../../features/izin/izin_page.dart';
+import '../../features/izin/izin_setup.dart';
 import '../../features/kehadiran/kehadiran_page.dart';
 import '../../features/profil/profil_page.dart';
 import '../../features/tahap2_routes.dart';
@@ -19,12 +21,13 @@ import '../theme/app_colors.dart';
 final _rootKey = GlobalKey<NavigatorState>();
 
 /// Rute aplikasi. Menu bawah (shell): / (Beranda), /kehadiran, /pengajuan,
-/// /info (karyawan) atau /tim (atasan), /profil. Layar penuh: /login,
+/// /info (karyawan) atau /tim (atasan), /profil. Layar penuh: /login, /izin,
 /// /koreksi, ditambah [tahap2Routes]. Urutan cabang = [ShellTab].
 /// Absen masuk/pulang tidak lagi lewat HP (pakai tablet kantor / mesin).
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authControllerProvider, (_, _) => refresh.value++);
+  ref.listen(izinSetupDoneProvider, (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -36,12 +39,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
       if (auth is AuthLoading) return loc == '/splash' ? null : '/splash';
       if (auth is AuthSignedOut) return loc == '/login' ? null : '/login';
+      // Sekali per HP sesudah login: alur izin (notifikasi, baterai, dll.).
+      if (ref.read(izinSetupDoneProvider) == false) return loc == '/izin' ? null : '/izin';
       if (loc == '/login' || loc == '/splash') return '/';
       return null;
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const _Splash()),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
+      GoRoute(path: '/izin', parentNavigatorKey: _rootKey, builder: (_, _) => const IzinPage()),
       GoRoute(
         path: '/koreksi',
         parentNavigatorKey: _rootKey,
