@@ -146,27 +146,3 @@ ChoiceCheck checkChosen(Employee e, List<LocalEvent> local, DateTime now, Tablet
   if (todayIn != null) return ChoiceCheck(ChoiceOutcome.record, 'out', since: todayIn);
   return const ChoiceCheck(ChoiceOutcome.notIn, 'out');
 }
-
-int? _minutes(String hhmm) {
-  final p = hhmm.split(':');
-  if (p.length < 2) return null;
-  final h = int.tryParse(p[0]), m = int.tryParse(p[1]);
-  return h == null || m == null ? null : h * 60 + m;
-}
-
-/// Pilihan bawaan tombol: sebelum titik tengah jadwal kerja = Masuk, sesudahnya =
-/// Pulang. Titik tengah diambil dari jadwal hari ini karyawan di lokasi ini
-/// (nilai tengah), atau pukul 12:00 bila tidak ada jadwal.
-String defaultChoice(List<Employee> employees, DateTime now) {
-  final mids = <int>[];
-  for (final e in employees) {
-    final sc = e.schedule;
-    if (sc == null) continue;
-    final a = _minutes(sc.start), b = _minutes(sc.end);
-    if (a == null || b == null || b <= a) continue; // shift malam: lewati
-    mids.add((a + b) ~/ 2);
-  }
-  mids.sort();
-  final cutoff = mids.isEmpty ? 12 * 60 : mids[mids.length ~/ 2];
-  return now.hour * 60 + now.minute < cutoff ? 'in' : 'out';
-}

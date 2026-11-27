@@ -54,8 +54,8 @@ class _Result {
   final PendingRecord? record;
 }
 
-/// Layar utama tablet: pilih Absen Masuk / Absen Pulang di atas (terpilih
-/// otomatis sesuai jam), lalu hadapkan wajah.
+/// Layar utama tablet: pilih Absen Masuk / Absen Pulang di atas, lalu hadapkan
+/// wajah. Pilihan hanya berubah bila ditekan; tidak pindah sendiri.
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.tablet, required this.camera, required this.engine});
   final TabletController tablet;
@@ -80,9 +80,8 @@ class _HomePageState extends State<HomePage> {
   final Map<int, DateTime> _cooldown = {};
   late ConsecutiveTracker _tracker;
 
-  // Tombol Absen Masuk / Absen Pulang. null = ikut jam (pilihan bawaan).
-  String? _manualChoice;
-  Timer? _choiceTimer;
+  // Tombol Absen Masuk / Absen Pulang. Hanya berubah bila ditekan pengguna.
+  String _choice = 'in';
   _Pending? _pending;
 
   // NIK + PIN
@@ -107,7 +106,6 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _timer?.cancel();
     _idleTimer?.cancel();
-    _choiceTimer?.cancel();
     widget.tablet.removeListener(_onTablet);
     if (widget.camera.onFrame == _onFrame) widget.camera.onFrame = null;
     super.dispose();
@@ -117,21 +115,9 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
-  String get _choice => _manualChoice ?? widget.tablet.defaultChoiceAt(DateTime.now());
-
   void _choose(String type) {
     if (_phase == _Phase.result || _phase == _Phase.confirm) return;
-    setState(() => _manualChoice = type);
-    // Pilihan manual kembali ke otomatis bila tidak ada yang absen dalam 30 detik,
-    // supaya orang berikutnya tidak ikut mode yang salah.
-    _choiceTimer?.cancel();
-    _choiceTimer = Timer(const Duration(seconds: 30), _clearChoice);
-  }
-
-  void _clearChoice() {
-    _choiceTimer?.cancel();
-    if (!mounted) return;
-    setState(() => _manualChoice = null);
+    setState(() => _choice = type);
   }
 
   void _setPhase(_Phase p) {
@@ -268,7 +254,6 @@ class _HomePageState extends State<HomePage> {
     final p = _pending;
     _pending = null;
     if (p != null) _cooldown[p.employee.id] = DateTime.now().add(const Duration(seconds: 6));
-    _clearChoice();
     _reset();
   }
 
@@ -351,7 +336,6 @@ class _HomePageState extends State<HomePage> {
     // Orang yang sama masih di depan kamera: jangan langsung dipindai ulang.
     _cooldown[r.employee.id] = DateTime.now().add(Duration(seconds: notMe ? 6 : 12));
     _result = null;
-    _clearChoice();
     _reset();
   }
 

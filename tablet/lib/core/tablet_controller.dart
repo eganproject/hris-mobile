@@ -152,9 +152,6 @@ class TabletController extends ChangeNotifier {
   ChoiceCheck checkChoice(Employee e, DateTime now, String chosen) =>
       checkChosen(e, localEventsFor(e.id), now, data?.settings ?? const TabletSettings(), chosen);
 
-  /// Pilihan bawaan tombol Masuk/Pulang menurut jam (lihat [defaultChoice]).
-  String defaultChoiceAt(DateTime now) => defaultChoice(data?.employees ?? const [], now);
-
   /// Daftar "Baru saja absen": dari server + yang baru tercatat di tablet ini.
   List<RecentItem> recent({int limit = 3}) {
     final today = DateTime.now();
